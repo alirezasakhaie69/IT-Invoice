@@ -17,7 +17,7 @@ cp .env.example .env
 docker compose up --build
 ```
 
-4. Open http://localhost:8000 and sign in with `ADMIN_USERNAME` and `ADMIN_PASSWORD` from `.env`.
+4. Open http://localhost:9050 and sign in with `ADMIN_USERNAME` and `ADMIN_PASSWORD` from `.env`.
 
 The first boot creates that admin when the user table is empty. The container clock uses `Asia/Tehran`, which is what “today” means for new invoices and clones. Sessions are checked in UTC and last 3 hours from login. Later requests do not extend them.
 
@@ -49,7 +49,7 @@ This writes `samples/invoice-fa-store.pdf` and `samples/invoice-en-formal.pdf`.
 | `TELEGRAM_PROXY_URL` | no | HTTP proxy used only for Telegram, for example `http://127.0.0.1:8080`. |
 | `BALE_API_BASE` | no | Default `https://tapi.bale.ai`. |
 | `TELEGRAM_API_BASE` | no | Default `https://api.telegram.org`. |
-| `APP_BASE_URL` | no | Public origin, default `http://localhost:8000`. Used as the OAuth redirect base. |
+| `APP_BASE_URL` | no | Public origin, default `http://localhost:9050`. Used as the OAuth redirect base. |
 | `DATA_DIR` | no | Default `/data` in Compose. |
 
 The app does not print these values.

@@ -29,5 +29,5 @@ RUN mkdir -p /usr/share/fonts/truetype/vazirmatn \
     && cp app/static/fonts/*.ttf /usr/share/fonts/truetype/vazirmatn/ \
     && fc-cache -f
 
-EXPOSE 8000
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+EXPOSE 9050
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 9050"]

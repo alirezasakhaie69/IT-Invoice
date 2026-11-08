@@ -17,7 +17,7 @@ def app_secret() -> str:
 
 
 def app_base_url() -> str:
-    return os.environ.get("APP_BASE_URL", "http://localhost:8000").rstrip("/")
+    return os.environ.get("APP_BASE_URL", "http://localhost:9050").rstrip("/")
 
 
 def bale_base() -> str:
