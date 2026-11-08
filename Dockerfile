@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -i https://mirror-pypi.runflare.com/simple/ --trusted-host mirror-pypi.runflare.com -r requirements.txt
 COPY . .
 RUN mkdir -p /usr/share/fonts/truetype/vazirmatn \
     && cp app/static/fonts/*.ttf /usr/share/fonts/truetype/vazirmatn/ \
