@@ -1,7 +1,7 @@
 import unittest
 from datetime import date
 
-from app.dates import format_date, from_jalali, to_jalali
+from app.dates import format_date, from_jalali, month_cells, to_jalali
 
 
 class CalendarConversionTest(unittest.TestCase):
@@ -12,6 +12,9 @@ class CalendarConversionTest(unittest.TestCase):
         self.assertEqual(format_date(new_year, "en"), "2024-03-20")
         shown = format_date(new_year, "fa")
         self.assertEqual(shown, "۱۴۰۳/۰۱/۰۱")
+        days = [cell for cell in month_cells(1405, 8) if cell is not None]
+        self.assertEqual(to_jalali(days[7]), (1405, 8, 8))
+        self.assertNotEqual(days[7].day, 8)
         for value in (date(2026, 11, 8), date(2020, 1, 1), date(2030, 12, 31)):
             year, month, day = to_jalali(value)
             self.assertEqual(from_jalali(year, month, day), value)

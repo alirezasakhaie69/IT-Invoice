@@ -64,7 +64,7 @@ class Issuer(Base):
 class Sequence(Base):
     __tablename__ = "sequences"
 
-    name: Mapped[str] = mapped_column(String(16), primary_key=True)
+    name: Mapped[str] = mapped_column(String(32), primary_key=True)
     last_value: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
@@ -74,9 +74,10 @@ class Invoice(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     doc_type: Mapped[str] = mapped_column(String(16), nullable=False)
-    number: Mapped[int] = mapped_column(Integer, nullable=False)
-    proforma_number: Mapped[int | None] = mapped_column(Integer, nullable=True, unique=True)
+    number: Mapped[str] = mapped_column(String(32), nullable=False)
+    proforma_number: Mapped[str | None] = mapped_column(String(32), nullable=True, unique=True)
     template: Mapped[str] = mapped_column(String(16), nullable=False, default="store")
+    accent: Mapped[str] = mapped_column(String(7), nullable=False, default="#2563eb")
     language: Mapped[str] = mapped_column(String(2), nullable=False, default="fa")
     customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), nullable=False)
     currency: Mapped[str] = mapped_column(String(8), nullable=False)

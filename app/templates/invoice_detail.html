@@ -4,7 +4,7 @@
 {% block body %}
 {% set invoice = view.invoice %}
 <div class="page-head">
-  <h1>{{ t(invoice.doc_type if invoice.doc_type == 'invoice' else 'proforma') }} {{ format_number(invoice.number) }}</h1>
+  <h1>{{ t(invoice.doc_type if invoice.doc_type == 'invoice' else 'proforma') }} {{ format_code(invoice.number) }}</h1>
   <a class="btn btn-ghost" href="/invoices">{{ t('back') }}</a>
 </div>
 <div class="badges" style="margin-bottom: 1rem;">
@@ -21,7 +21,7 @@
     <p><strong>{{ t('template') }}:</strong> {{ t(invoice.template) }}</p>
     <p><strong>{{ t('pdf_language') }}:</strong> {{ t('persian') if invoice.language == 'fa' else t('english') }}</p>
     {% if invoice.doc_type == 'invoice' and invoice.proforma_number %}
-    <p><strong>{{ t('proforma_ref') }}:</strong> {{ format_number(invoice.proforma_number) }}</p>
+    <p><strong>{{ t('proforma_ref') }}:</strong> {{ format_code(invoice.proforma_number) }}</p>
     {% endif %}
   </div>
   <p><strong>{{ t('brief_note') }}:</strong> {{ invoice.brief_note or t('dash') }}</p>
@@ -70,7 +70,7 @@
   <a class="btn btn-secondary" href="/invoices/{{ invoice.id }}/pdf">{{ t('download_pdf') }}</a>
   <form method="post" action="/invoices/{{ invoice.id }}/send">
     <input type="hidden" name="csrf_token" value="{{ csrf }}">
-    <button class="btn btn-primary" type="submit">{{ t('send') }}</button>
+    <button class="btn btn-primary" type="submit">{{ t('resend') if invoice.delivery == 'sent' else t('send') }}</button>
   </form>
   <form method="post" action="/invoices/{{ invoice.id }}/drive">
     <input type="hidden" name="csrf_token" value="{{ csrf }}">

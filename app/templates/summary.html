@@ -43,8 +43,8 @@
     <tbody>
       {% for row in rows %}
       <tr>
-        <td>{{ format_number(row.number) }}</td>
-        <td>{{ row.customer }}</td>
+        <td>{{ format_code(row.number) }}</td>
+        <td><a href="/invoices?customer={{ row.customer_id }}">{{ row.customer }}</a></td>
         <td>{{ t(row.currency) }}</td>
         <td>{{ format_date(row.issue_date) }}</td>
         <td>{{ format_number(row.total) }}</td>

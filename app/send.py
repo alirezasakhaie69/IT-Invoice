@@ -64,11 +64,20 @@ def write_pdf(invoice, customer, issuer) -> Path:
     return path
 
 
-def deliver(channel: str, chat_id: str, filename: str, payload: bytes, caption: str) -> tuple[bool, str]:
+def channel_token(db, channel: str) -> str:
+    from app.drive import load_drive
+
+    saved = (load_drive(db).get("bale_bot_token" if channel == "bale" else "telegram_bot_token") or "").strip()
+    if saved:
+        return saved
+    return bale_token() if channel == "bale" else telegram_token()
+
+
+def deliver(channel: str, chat_id: str, filename: str, payload: bytes, caption: str, token: str) -> tuple[bool, str]:
     if channel == "bale":
-        base, token, proxy = bale_base(), bale_token(), None
+        base, proxy = bale_base(), None
     else:
-        base, token, proxy = telegram_base(), telegram_token(), telegram_proxy() or None
+        base, proxy = telegram_base(), telegram_proxy() or None
     if not token:
         return False, "Bot token is not configured."
     url = f"{base}/bot{token}/sendDocument"
@@ -117,13 +126,13 @@ def send_invoice(db, invoice: Invoice, customer, issuer) -> str:
             return "no_channel"
         path = write_pdf(invoice, customer, issuer)
         payload = path.read_bytes()
-        filename = pdf_filename(invoice)
+        filename = pdf_filename(invoice, customer.name)
         locale = invoice.language if invoice.language in ("fa", "en") else "fa"
         title_key = "title_invoice" if invoice.doc_type == "invoice" else "title_proforma"
         caption = f"{translate(locale, title_key)} {format_number(invoice.number, locale)}"
         all_ok = True
         for channel, chat_id in channels:
-            ok, error = deliver(channel, chat_id, filename, payload, caption)
+            ok, error = deliver(channel, chat_id, filename, payload, caption, channel_token(db, channel))
             db.add(SendLog(
                 invoice_id=invoice.id,
                 created_at=utcnow(),

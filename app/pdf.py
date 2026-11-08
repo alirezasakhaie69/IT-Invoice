@@ -1,9 +1,10 @@
+import re
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from app.dates import format_date
-from app.format import amount_in_words, format_number
+from app.format import amount_in_words, format_number, localize_digits
 from app.i18n import translate
 from app.invoices import invoice_money
 
@@ -75,7 +76,7 @@ def render_invoice_pdf(invoice, customer, issuer) -> bytes:
         "font_css": font_css(),
         "t": lambda key, **kwargs: translate(locale, key, **kwargs),
         "title": translate(locale, title_key),
-        "number": format_number(invoice.number, locale),
+        "number": localize_digits(str(invoice.number), locale),
         "issue_date": format_date(invoice.issue_date, locale),
         "due_date": format_date(invoice.due_date, locale) or translate(locale, "dash"),
         "currency": translate(locale, invoice.currency),
@@ -93,6 +94,7 @@ def render_invoice_pdf(invoice, customer, issuer) -> bytes:
         "tax": format_number(money["tax"], locale),
         "total": format_number(money["total"], locale),
         "words": amount_in_words(money["total"], invoice.currency, locale),
+        **accent_style(getattr(invoice, "accent", "")),
     }
     name = "pdf/store.html" if invoice.template == "store" else "pdf/formal.html"
     html = _ENV.get_template(name).render(**context)
@@ -100,6 +102,35 @@ def render_invoice_pdf(invoice, customer, issuer) -> bytes:
     return HTML(string=html, base_url=str(FONT_DIR)).write_pdf()
 
 
-def pdf_filename(invoice) -> str:
-    kind = "proforma" if invoice.doc_type == "proforma" else "invoice"
-    return f"{kind}-{invoice.number}.pdf"
+FORMAL_COLORS = (
+    ("red", "#dc2626"),
+    ("blue", "#2563eb"),
+    ("orange", "#ea580c"),
+    ("green", "#16a34a"),
+    ("teal", "#0d9488"),
+)
+_FORMAL_HEX = {color.lower(): color for _name, color in FORMAL_COLORS}
+
+
+def normalize_accent(value: str) -> str:
+    return _FORMAL_HEX.get((value or "").strip().lower(), "#2563eb")
+
+
+def accent_style(value: str) -> dict:
+    color = normalize_accent(value)
+    red, green, blue = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
+    return {
+        "accent": color,
+        "accent_soft": f"rgba({red}, {green}, {blue}, 0.06)",
+        "accent_line": f"rgba({red}, {green}, {blue}, 0.2)",
+    }
+
+
+def pdf_filename(invoice, customer_name: str) -> str:
+    number = str(invoice.number)
+    name = re.sub(r'[\\/:*?"<>|]+', " ", customer_name or "").strip() or "—"
+    if getattr(invoice, "language", "fa") == "fa":
+        kind = "پیش‌فاکتور" if invoice.doc_type == "proforma" else "فاکتور"
+        return f"{kind} شماره {number} - مشتری {name}.pdf"
+    kind = "Pro forma" if invoice.doc_type == "proforma" else "Invoice"
+    return f"{kind} {number} - {name}.pdf"

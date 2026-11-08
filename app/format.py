@@ -20,6 +20,10 @@ _TENS_EN = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "e
 _SCALES_EN = ((10**12, "trillion"), (10**9, "billion"), (10**6, "million"), (10**3, "thousand"))
 
 
+def western_digits(text: str) -> str:
+    return (text or "").translate(_TO_LATIN)
+
+
 def localize_digits(text: str, locale: str) -> str:
     if locale == "fa":
         return text.translate(_TO_PERSIAN)
@@ -112,8 +116,11 @@ def _words_en(number: int) -> str:
 
 
 def amount_in_words(amount: int, currency: str, locale: str) -> str:
+    value = int(amount)
     if locale == "fa":
         unit = "ریال" if currency == "rial" else "تومان"
-        return f"{_words_fa(abs(int(amount)))} {unit}"
+        words = f"{_words_fa(abs(value))} {unit}"
+        return f"منفی {words}" if value < 0 else words
     unit = "rial" if currency == "rial" else "toman"
-    return f"{_words_en(abs(int(amount)))} {unit}"
+    words = f"{_words_en(abs(value))} {unit}"
+    return f"minus {words}" if value < 0 else words

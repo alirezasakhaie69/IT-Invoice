@@ -17,6 +17,24 @@
   <input type="hidden" name="csrf_token" value="{{ csrf }}">
   <div class="card grid-2">
     <div class="field">
+      <label>{{ t('number') }}</label>
+      <input class="input" name="number" value="{{ number }}" placeholder="1405-001">
+      <p class="hint">{{ t('help_number') }}</p>
+    </div>
+    <div class="field">
+      <label>{{ t('accent') }}</label>
+      <div class="swatches">
+        {% for name, color in formal_colors %}
+        <label class="swatch">
+          <input type="radio" name="accent" value="{{ color }}" {% if accent == color %}checked{% endif %}>
+          <i style="background: {{ color }}"></i>
+          {{ t('color_' + name) }}
+        </label>
+        {% endfor %}
+      </div>
+      <p class="hint">{{ t('help_accent') }}</p>
+    </div>
+    <div class="field">
       <label>{{ t('customer') }}</label>
       <select class="input" name="customer_id">
         <option value="">{{ t('choose') }}</option>
@@ -85,6 +103,7 @@
       {% include "partials/line_row.html" %}
       {% endfor %}
     </div>
+    <p class="hint">{{ t('help_return') }}</p>
     <button class="btn btn-tint" type="button" hx-get="/invoices/line-row" hx-target="#lines" hx-swap="beforeend">{{ t('add_line') }}</button>
     <div id="totals"
       hx-post="/invoices/preview"

@@ -102,7 +102,7 @@ Uploads send `supportsAllDrives=true`. Files are created with `POST https://www.
 
 - Amounts are integers in the invoice’s own unit, rial or toman. They are never converted. One toman is 10 rial only as a definition. Totals on the summary are grouped by unit.
 - Quantity is a positive whole number. Discount is an amount in the same unit. Tax is a percent from 0 to 100. Line tax rounds half up.
-- Invoices and pro formas have separate number sequences. Converting a pro forma gives it the next invoice number, keeps the pro forma number on the page, sets delivery back to not sent, and keeps recorded payments so they count as receivables.
+- Invoices and pro formas have separate yearly numbers such as `1405-001`, taken from the Solar Hijri year of the issue date. The number can be edited. Converting a pro forma gives it the next invoice number, keeps the pro forma number on the page, sets delivery back to not sent, and keeps recorded payments so they count as receivables. A sent invoice can be sent again.
 - Clone copies the customer, lines, currency, document type, and template. The language follows your current UI language. The issue date is today. Due date and the brief note are cleared. Delivery is not sent and there are no payments. The new document opens in the editor.
 - The brief note is shown in the list and on the detail page. It is not in the PDF.
 - Payment status is derived: unpaid, partially paid, or paid (including a zero total, or an overpayment). Outstanding is the total minus payments and can be negative.
@@ -131,7 +131,7 @@ Deviations from the [Factor-Builder](https://github.com/Alirewa/Factor-Builder) 
 - Service accounts work only with a Shared Drive.
 - The OAuth client must be allowed to use the full Drive scope.
 - Sessions end 3 hours after login and are not extended by activity.
-- Quantity is a whole number. Money is not converted between rial and toman.
+- Quantity is a whole number and may be negative, which subtracts a return from the total. Money is not converted between rial and toman. Bot tokens can be saved in Settings; a blank field keeps the environment variable. Downloaded and Drive PDFs are named with the document number and the customer name. The formal PDF color is chosen on the invoice.
 - There is one seller profile, no logo, and no light theme.
 - This is a single-server app. The login limit and the send lock live in SQLite.
 

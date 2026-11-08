@@ -12,15 +12,18 @@
     {% for name in weekdays %}<span>{{ name }}</span>{% endfor %}
     {% for cell in cells %}
       {% if cell %}
-      <button type="button" class="day {% if cell.isoformat() == selected %}selected{% endif %}"
-        data-iso="{{ cell.isoformat() }}" data-label="{{ format_date(cell) }}"
+      <button type="button" class="day {% if cell.iso == selected %}selected{% endif %}"
+        data-iso="{{ cell.iso }}" data-label="{{ cell.label }}"
         onclick="pickDate(this)">{{ format_number(cell.day) }}</button>
       {% else %}
       <span></span>
       {% endif %}
     {% endfor %}
   </div>
-  {% if clear %}
-  <button type="button" class="btn btn-ghost btn-small" onclick="clearDate(this)">{{ t('clear') }}</button>
-  {% endif %}
+  <div class="calendar-actions">
+    <button type="button" class="btn btn-ghost btn-small" data-iso="{{ today_iso }}" data-label="{{ today_label }}" onclick="pickDate(this)">{{ t('today') }}</button>
+    {% if clear %}
+    <button type="button" class="btn btn-ghost btn-small" onclick="clearDate(this)">{{ t('clear') }}</button>
+    {% endif %}
+  </div>
 </div>

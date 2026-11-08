@@ -24,6 +24,10 @@ class PaymentStatusTest(unittest.TestCase):
             compute_line(1, 10, 11, 0)
         with self.assertRaises(ValueError):
             compute_line(0, 10, 0, 0)
+        returned = compute_line(-2, 1_500_000, 0, 10)
+        self.assertEqual(returned["gross"], -3_000_000)
+        self.assertEqual(returned["tax"], -300_000)
+        self.assertEqual(returned["total"], -3_300_000)
 
 
 if __name__ == "__main__":

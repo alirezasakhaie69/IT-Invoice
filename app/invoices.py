@@ -1,3 +1,4 @@
+import re
 from datetime import date, datetime
 from decimal import Decimal, ROUND_HALF_UP
 
@@ -5,16 +6,23 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.auth import utcnow
+from app.dates import to_jalali
+from app.format import western_digits
 from app.models import Invoice, InvoiceLine, Payment, Sequence
 
 
+class NumberTaken(Exception):
+    pass
+
+
 def compute_line(quantity: int, unit_price: int, discount: int, tax_percent: int) -> dict:
-    if quantity < 1 or unit_price < 0 or discount < 0 or not 0 <= tax_percent <= 100:
+    if quantity == 0 or unit_price < 0 or discount < 0 or not 0 <= tax_percent <= 100:
         raise ValueError("line")
     gross = quantity * unit_price
-    if discount > gross:
+    if discount > abs(gross):
         raise ValueError("discount")
-    base = gross - discount
+    magnitude = abs(gross) - discount
+    base = magnitude if gross >= 0 else -magnitude
     tax = int((Decimal(base) * Decimal(tax_percent) / Decimal(100)).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
     return {"gross": gross, "discount": discount, "base": base, "tax": tax, "total": base + tax}
 
@@ -62,25 +70,62 @@ def present(invoice: Invoice) -> dict:
     }
 
 
-def next_number(db, doc_type: str) -> int:
-    row = db.get(Sequence, doc_type)
+def sequence_key(doc_type: str, year: int) -> str:
+    return f"{doc_type}-{year}"
+
+
+def peek_number(db, doc_type: str, issue: date) -> str:
+    year = to_jalali(issue)[0]
+    row = db.get(Sequence, sequence_key(doc_type, year))
+    last = row.last_value if row else 0
+    return f"{year}-{last + 1:03d}"
+
+
+def normalize_doc_number(raw: str) -> str:
+    text = western_digits(raw or "").strip().replace(" ", "")
+    match = re.fullmatch(r"(\d{4})-(\d{1,6})", text)
+    if not match:
+        raise ValueError("number")
+    serial = int(match.group(2))
+    if serial < 1:
+        raise ValueError("number")
+    return f"{int(match.group(1)):04d}-{serial:03d}"
+
+
+def claim_number(db, doc_type: str, issue: date, raw: str = "", exclude_id: int | None = None) -> str:
+    chosen = normalize_doc_number(raw) if (raw or "").strip() else peek_number(db, doc_type, issue)
+    year_text, serial_text = chosen.split("-")
+    year, serial = int(year_text), int(serial_text)
+    stmt = select(Invoice.id).where(Invoice.doc_type == doc_type, Invoice.number == chosen)
+    if exclude_id is not None:
+        stmt = stmt.where(Invoice.id != exclude_id)
+    if db.scalar(stmt):
+        raise NumberTaken()
+    key = sequence_key(doc_type, year)
+    row = db.get(Sequence, key)
     if row is None:
-        row = Sequence(name=doc_type, last_value=0)
+        row = Sequence(name=key, last_value=0)
         db.add(row)
         db.flush()
-    row.last_value += 1
-    db.flush()
-    return row.last_value
+    if serial > row.last_value:
+        row.last_value = serial
+        db.flush()
+    return chosen
+
+
+def next_number(db, doc_type: str, issue: date) -> str:
+    return claim_number(db, doc_type, issue, "")
 
 
 def clone_invoice(db, source: Invoice, locale: str, today: date) -> Invoice:
-    number = next_number(db, source.doc_type)
+    number = next_number(db, source.doc_type, today)
     now = utcnow()
     clone = Invoice(
         doc_type=source.doc_type,
         number=number,
         proforma_number=number if source.doc_type == "proforma" else None,
         template=source.template,
+        accent=getattr(source, "accent", None) or "#2563eb",
         language=locale if locale in ("fa", "en") else "fa",
         customer_id=source.customer_id,
         currency=source.currency,
@@ -114,7 +159,7 @@ def convert_proforma(db, invoice: Invoice) -> None:
         raise ValueError("not proforma")
     if invoice.proforma_number is None:
         invoice.proforma_number = invoice.number
-    invoice.number = next_number(db, "invoice")
+    invoice.number = next_number(db, "invoice", invoice.issue_date)
     invoice.doc_type = "invoice"
     invoice.delivery = "not_sent"
     invoice.updated_at = utcnow()
@@ -135,6 +180,7 @@ def book_rows(db, start: date, end: date) -> tuple[list[dict], dict]:
         rows.append({
             "number": invoice.number,
             "customer": invoice.customer.name if invoice.customer else "",
+            "customer_id": invoice.customer_id,
             "currency": invoice.currency,
             "issue_date": invoice.issue_date,
             "total": view["money"]["total"],

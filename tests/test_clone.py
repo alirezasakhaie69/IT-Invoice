@@ -28,14 +28,14 @@ class CloneTest(unittest.TestCase):
         self.db.add_all([
             self.user,
             self.customer,
-            Sequence(name="invoice", last_value=0),
-            Sequence(name="proforma", last_value=4),
+            Sequence(name="invoice-1398", last_value=0),
+            Sequence(name="proforma-1398", last_value=4),
         ])
         self.db.flush()
         self.source = Invoice(
             doc_type="proforma",
-            number=4,
-            proforma_number=4,
+            number="1398-004",
+            proforma_number="1398-004",
             template="formal",
             language="fa",
             customer_id=self.customer.id,
@@ -69,7 +69,7 @@ class CloneTest(unittest.TestCase):
         clone = clone_invoice(self.db, self.source, self.user.locale, today)
         self.db.commit()
         self.assertNotEqual(clone.id, self.source.id)
-        self.assertEqual(clone.number, 5)
+        self.assertEqual(clone.number, "1405-001")
         self.assertEqual(clone.doc_type, "proforma")
         self.assertEqual(clone.template, "formal")
         self.assertEqual(clone.language, "en")
@@ -92,7 +92,7 @@ class CloneTest(unittest.TestCase):
         self.assertEqual(payments, 0)
         view = present(clone)
         self.assertEqual(view["pay_status"], "unpaid")
-        self.assertEqual(self.source.number, 4)
+        self.assertEqual(self.source.number, "1398-004")
         self.assertEqual(self.source.delivery, "sent")
         self.assertEqual(self.source.brief_note, "internal")
 
@@ -100,8 +100,8 @@ class CloneTest(unittest.TestCase):
         convert_proforma(self.db, self.source)
         self.db.commit()
         self.assertEqual(self.source.doc_type, "invoice")
-        self.assertEqual(self.source.proforma_number, 4)
-        self.assertEqual(self.source.number, 1)
+        self.assertEqual(self.source.proforma_number, "1398-004")
+        self.assertEqual(self.source.number, "1398-001")
         self.assertEqual(self.source.delivery, "not_sent")
         self.assertEqual(len(self.source.payments), 1)
         self.assertEqual(payment_status(present(self.source)["money"]["total"], present(self.source)["paid"]), "partial")

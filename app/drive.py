@@ -70,6 +70,8 @@ def public_view(data: dict) -> dict:
         "connected": bool(data.get("refresh_token")),
         "shared_drive_id": data.get("shared_drive_id") or "",
         "has_service_account": bool(data.get("service_account_json")),
+        "has_bale_token": bool(data.get("bale_bot_token")),
+        "has_telegram_token": bool(data.get("telegram_bot_token")),
         "redirect_uri": redirect_uri(),
         "last_test": data.get("last_test") or "",
     }
@@ -93,6 +95,12 @@ def apply_form(current: dict, form) -> dict:
     secret = (form.get("oauth_client_secret") or "").strip()
     if secret:
         data["oauth_client_secret"] = secret
+    bale = (form.get("bale_bot_token") or "").strip()
+    if bale:
+        data["bale_bot_token"] = bale
+    telegram = (form.get("telegram_bot_token") or "").strip()
+    if telegram:
+        data["telegram_bot_token"] = telegram
     raw_json = (form.get("service_account_json") or "").strip()
     if raw_json:
         if len(raw_json) > 100_000:

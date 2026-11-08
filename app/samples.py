@@ -23,7 +23,8 @@ def _invoice(**kwargs):
     lines = kwargs.pop("lines")
     data = dict(
         doc_type="invoice",
-        number=12,
+        number="1405-012",
+        accent="#2563eb",
         proforma_number=None,
         template="store",
         language="fa",

@@ -2,9 +2,12 @@
 {% from "partials/badges.html" import badge %}
 {% block body %}
 <div class="page-head">
-  <h1>{{ t('invoices') }}</h1>
+  <h1>{{ t('invoices') }}{% if customer_name %} — {{ customer_name }}{% endif %}</h1>
   <a class="btn btn-primary" href="/invoices/new">{{ t('new_invoice') }}</a>
 </div>
+{% if customer_name %}
+<p class="hint"><a href="/invoices">{{ t('all_invoices') }}</a></p>
+{% endif %}
 <div class="card table-wrap">
   {% if rows %}
   <table class="data">
@@ -25,7 +28,7 @@
       {% for row in rows %}
       {% set invoice = row.invoice %}
       <tr>
-        <td>{{ format_number(invoice.number) }}</td>
+        <td>{{ format_code(invoice.number) }}</td>
         <td>{{ invoice.customer.name }}</td>
         <td>{{ badge(invoice.doc_type if invoice.doc_type == 'invoice' else 'proforma', t(invoice.doc_type if invoice.doc_type == 'invoice' else 'proforma')) }}</td>
         <td>{{ badge('sent' if invoice.delivery == 'sent' else 'unsent', t(invoice.delivery)) }}</td>

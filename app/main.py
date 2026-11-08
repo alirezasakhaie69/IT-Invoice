@@ -40,15 +40,16 @@ from app.dates import (
     month_cells,
     month_label,
     shift_month,
+    to_jalali,
     weekday_labels,
 )
 from app.db import SessionLocal
 from app.drive import apply_form, authorization_url, exchange_code, load_drive, parse_state, public_view, save_drive, test_connection, upload_pdf
-from app.format import format_input, format_number, parse_int
+from app.format import format_input, format_number, localize_digits, parse_int
 from app.i18n import translate
-from app.invoices import book_rows, clone_invoice, compute_line, convert_proforma, invoice_money, next_number, present, replace_lines
+from app.invoices import NumberTaken, book_rows, claim_number, clone_invoice, compute_line, convert_proforma, invoice_money, peek_number, present, replace_lines
 from app.models import Customer, Invoice, Issuer, Payment, SessionRow, User
-from app.pdf import pdf_filename
+from app.pdf import FORMAL_COLORS, normalize_accent, pdf_filename
 from app.send import send_invoice, write_pdf
 
 log = logging.getLogger("invoice")
@@ -113,6 +114,7 @@ def render(request: Request, name: str, status_code: int = 200, **extra):
         "csrf": extra.pop("csrf", getattr(request.state, "csrf", "")),
         "t": lambda key, **kwargs: translate(locale, key, **kwargs),
         "format_number": lambda value: format_number(int(value), locale),
+        "format_code": lambda value: localize_digits(str(value), locale),
         "format_date": lambda value: format_date(value, locale),
         "format_iso": lambda value: format_iso(value, locale),
         "format_timestamp": lambda value: format_timestamp(value, locale),
@@ -383,6 +385,18 @@ def calendar(request: Request, year: int = 0, month: int = 0, selected: str = ""
         year, month = jalali_parts("")
     previous = shift_month(year, month, -1)
     nxt = shift_month(year, month, 1)
+    locale = request.state.user.locale
+    cells = []
+    for cell in month_cells(year, month):
+        if cell is None:
+            cells.append(None)
+            continue
+        cells.append({
+            "iso": cell.isoformat(),
+            "label": format_date(cell, locale),
+            "day": to_jalali(cell)[2],
+        })
+    today = date.today()
     return html(
         request,
         "partials/calendar.html",
@@ -392,11 +406,13 @@ def calendar(request: Request, year: int = 0, month: int = 0, selected: str = ""
         prev_month=previous[1],
         next_year=nxt[0],
         next_month=nxt[1],
-        cells=month_cells(year, month),
+        cells=cells,
         selected=selected,
         clear=bool(clear),
-        label=month_label(year, month, request.state.user.locale),
+        label=month_label(year, month, locale),
         weekdays=weekday_labels(),
+        today_iso=today.isoformat(),
+        today_label=format_date(today, locale),
     )
 
 
@@ -414,15 +430,19 @@ def preview(request: Request):
 
 
 @app.get("/invoices")
-def invoice_list(request: Request):
+def invoice_list(request: Request, customer: int = 0):
     with session() as db:
-        invoices = db.scalars(
+        stmt = (
             select(Invoice)
             .options(selectinload(Invoice.lines), selectinload(Invoice.payments), selectinload(Invoice.customer))
             .order_by(Invoice.id.desc())
-        ).unique().all()
+        )
+        if customer:
+            stmt = stmt.where(Invoice.customer_id == customer)
+        invoices = db.scalars(stmt).unique().all()
+        person = db.get(Customer, customer) if customer else None
         rows = [present(invoice) for invoice in invoices]
-        return html(request, "invoices.html", rows=rows)
+        return html(request, "invoices.html", rows=rows, customer_name=person.name if person else "", customer_id=customer)
 
 
 def form_page(request, customers, invoice, values, lines, errors):
@@ -443,6 +463,9 @@ def form_page(request, customers, invoice, values, lines, errors):
         brief_note=values["brief_note"],
         money=values["money"],
         invalid=values["invalid"],
+        number=values["number"],
+        accent=normalize_accent(values["accent"]),
+        formal_colors=FORMAL_COLORS,
     )
 
 
@@ -458,6 +481,8 @@ def empty_invoice_values(locale: str) -> dict:
         "brief_note": "",
         "money": invoice_money(SimpleNamespace(lines=[])),
         "invalid": False,
+        "number": "",
+        "accent": "#2563eb",
     }
 
 
@@ -466,7 +491,9 @@ def new_invoice(request: Request):
     locale = request.state.user.locale
     with session() as db:
         customers = db.scalars(select(Customer).order_by(Customer.name)).all()
-        return form_page(request, customers, None, empty_invoice_values(locale), [blank_line(locale)], [])
+        values = empty_invoice_values(locale)
+        values["number"] = peek_number(db, "invoice", date.today())
+        return form_page(request, customers, None, values, [blank_line(locale)], [])
 
 
 @app.post("/invoices")
@@ -504,6 +531,8 @@ def edit_invoice(request: Request, invoice_id: int):
             "brief_note": invoice.brief_note,
             "money": invoice_money(invoice),
             "invalid": False,
+            "number": invoice.number,
+            "accent": normalize_accent(invoice.accent),
         }
         lines = lines_from_invoice(invoice, locale)
         return form_page(request, customers, invoice, values, lines, [])
@@ -548,6 +577,7 @@ def save_invoice(request: Request, invoice_id: int | None):
         currency = invoice.currency if invoice else form.get("currency")
         if currency not in ("rial", "toman"):
             currency = "rial"
+        accent = normalize_accent(form.get("accent"))
         if customer_id and db.get(Customer, customer_id) is None:
             errors.append(translate(locale, "customer_required"))
         values = {
@@ -561,17 +591,27 @@ def save_invoice(request: Request, invoice_id: int | None):
             "brief_note": form.get("brief_note")[:280],
             "money": money_preview(parsed, currency)[0],
             "invalid": invalid,
+            "number": form.get("number"),
+            "accent": accent,
         }
         if errors or issue is None:
             return form_page(request, customers, invoice, values, raw or [blank_line(locale)], errors)
+        try:
+            number = claim_number(db, doc_type, issue, form.get("number"), invoice.id if invoice else None)
+        except NumberTaken:
+            errors.append(translate(locale, "number_taken"))
+            return form_page(request, customers, invoice, values, raw or [blank_line(locale)], errors)
+        except ValueError:
+            errors.append(translate(locale, "number_invalid"))
+            return form_page(request, customers, invoice, values, raw or [blank_line(locale)], errors)
         now = utcnow()
         if invoice is None:
-            number = next_number(db, doc_type)
             invoice = Invoice(
                 doc_type=doc_type,
                 number=number,
                 proforma_number=number if doc_type == "proforma" else None,
                 template=template_name,
+                accent=accent,
                 language=language,
                 customer_id=customer_id,
                 currency=currency,
@@ -588,7 +628,12 @@ def save_invoice(request: Request, invoice_id: int | None):
             db.add(invoice)
             db.flush()
         else:
+            previous_number = invoice.number
+            invoice.number = number
+            if invoice.doc_type == "proforma" and invoice.proforma_number == previous_number:
+                invoice.proforma_number = number
             invoice.template = template_name
+            invoice.accent = accent
             invoice.language = language
             invoice.customer_id = customer_id
             invoice.issue_date = issue
@@ -687,7 +732,7 @@ def download_pdf(request: Request, invoice_id: int):
         if invoice is None:
             return html(request, "missing.html", status_code=404)
         path = write_pdf(invoice, invoice.customer, get_issuer(db))
-        filename = pdf_filename(invoice)
+        filename = pdf_filename(invoice, invoice.customer.name if invoice.customer else "")
     return FileResponse(path, media_type="application/pdf", filename=filename)
 
 
@@ -713,7 +758,7 @@ def drive_route(request: Request, invoice_id: int):
             return html(request, "missing.html", status_code=404)
         try:
             path = write_pdf(invoice, invoice.customer, get_issuer(db))
-            invoice.drive_file_id = upload_pdf(db, invoice, path.read_bytes(), pdf_filename(invoice))
+            invoice.drive_file_id = upload_pdf(db, invoice, path.read_bytes(), pdf_filename(invoice, invoice.customer.name if invoice.customer else ""))
             invoice.drive_error = ""
             code = "drive_ok"
         except Exception as exc:

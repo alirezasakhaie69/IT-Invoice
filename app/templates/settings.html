@@ -17,6 +17,20 @@
     </div>
   </div>
   <div class="card">
+    <h2>{{ t('bots') }}</h2>
+    <p class="hint">{{ t('help_bot_tokens') }}</p>
+    <div class="grid-2">
+      <div class="field">
+        <label>{{ t('bale_token') }} — {{ t('configured') if drive.has_bale_token else t('not_configured') }}</label>
+        <input class="input" name="bale_bot_token" type="password" autocomplete="off" placeholder="{{ t('leave_secret') }}">
+      </div>
+      <div class="field">
+        <label>{{ t('telegram_token') }} — {{ t('configured') if drive.has_telegram_token else t('not_configured') }}</label>
+        <input class="input" name="telegram_bot_token" type="password" autocomplete="off" placeholder="{{ t('leave_secret') }}">
+      </div>
+    </div>
+  </div>
+  <div class="card">
     <h2>Google Drive</h2>
     <p class="hint">{{ t('help_folder') }}</p>
     <p class="hint">{{ t('help_oauth') }}</p>
