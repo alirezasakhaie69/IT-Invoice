@@ -43,6 +43,7 @@ class CloneTest(unittest.TestCase):
             issue_date=date(2020, 1, 5),
             due_date=date(2020, 2, 5),
             brief_note="internal",
+            notes="Warranty 18 months",
             delivery="sent",
             sending=False,
             drive_file_id="",
@@ -78,6 +79,7 @@ class CloneTest(unittest.TestCase):
         self.assertEqual(clone.issue_date, today)
         self.assertIsNone(clone.due_date)
         self.assertEqual(clone.brief_note, "")
+        self.assertEqual(clone.notes, "Warranty 18 months")
         self.assertEqual(clone.delivery, "not_sent")
         self.assertEqual(len(clone.lines), 1)
         copied = clone.lines[0]

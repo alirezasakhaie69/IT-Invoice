@@ -101,6 +101,11 @@
     </div>
   </div>
   <div class="card">
+    <h2>{{ t('invoice_notes') }}</h2>
+    <textarea class="input" name="notes" maxlength="400" rows="4" placeholder="{{ t('notes_placeholder') }}">{{ notes }}</textarea>
+    <p class="hint">{{ t('help_invoice_notes') }}</p>
+  </div>
+  <div class="card">
     <div id="lines">
       {% for line in lines %}
       {% include "partials/line_row.html" %}

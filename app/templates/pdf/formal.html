@@ -26,7 +26,10 @@
     table.items td { padding: 7px 8px; border-bottom: 1px solid #eef2f7; font-size: 11px; }
     table.items tr.alt td { background: #f8fafc; }
     .money { direction: ltr; text-align: left; font-weight: 700; }
-    .summary-wrap { display: flex; }
+    .summary-wrap { display: flex; gap: 16px; align-items: flex-start; }
+    .notes { flex: 1; padding: 9px 11px; border: 1px solid {{ accent_line }}; border-radius: 6px; background: {{ accent_soft }}; }
+    .notes strong { display: block; color: {{ accent }}; font-size: 10.5px; margin-bottom: 3px; }
+    .notes p { margin: 0; color: #475569; line-height: 1.8; white-space: pre-line; }
     .summary { min-width: 270px; margin-inline-start: auto; border: 1px solid {{ accent_line }}; border-radius: 8px; overflow: hidden; }
     .summary h2 { margin: 0; background: {{ accent }}; color: #ffffff; font-size: 11px; font-weight: 700; padding: 6px 12px; }
     .summary .inner { padding: 11px; }
@@ -93,6 +96,12 @@
       </tbody>
     </table>
     <div class="summary-wrap">
+      {% if notes %}
+      <div class="notes">
+        <strong>{{ t('notes_label') }}</strong>
+        <p>{{ notes }}</p>
+      </div>
+      {% endif %}
       <div class="summary">
         <h2>{{ t('financial_summary') }}</h2>
         <div class="inner">

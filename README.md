@@ -104,7 +104,7 @@ Uploads send `supportsAllDrives=true`. Files are created with `POST https://www.
 - Quantity is a positive whole number. Discount is an amount in the same unit. Tax is a percent from 0 to 100. Line tax rounds half up.
 - Invoices and pro formas have separate yearly numbers such as `1405-001`, taken from the Solar Hijri year of the issue date. The number can be edited. Converting a pro forma gives it the next invoice number, keeps the pro forma number on the page, sets delivery back to not sent, and keeps recorded payments so they count as receivables. A sent invoice can be sent again.
 - Clone copies the customer, lines, currency, document type, and template. The language follows your current UI language. The issue date is today. Due date and the brief note are cleared. Delivery is not sent and there are no payments. The new document opens in the editor.
-- The brief note is shown in the list and on the detail page. It is not in the PDF.
+- The brief note is shown in the list and on the detail page. It is not in the PDF. The invoice description is printed at the bottom of the PDF.
 - Payment status is derived: unpaid, partially paid, or paid (including a zero total, or an overpayment). Outstanding is the total minus payments and can be negative.
 - The summary uses issue date and skips pro formas. CSV contains the invoice rows and the per-currency totals as plain integers.
 - Persian is the default, right to left, with the Solar Hijri calendar. English is left to right with the Gregorian calendar. Dates are stored as Gregorian ISO. Digits and thousands separators go through one formatter: `1,000,000` in English and `۱,۰۰۰,۰۰۰` in Persian.
@@ -116,7 +116,7 @@ Each invoice is Store (monochrome pad) or Formal (blue `#2563eb`). Both are A4, 
 
 Deviations from the [Factor-Builder](https://github.com/Alirewa/Factor-Builder) templates:
 
-- The brief note and the sample “توضیحات” block are omitted.
+- The brief note stays off the PDF. The invoice description (توضیحات) is printed at the bottom when it is filled in.
 - Due date is an extra meta row.
 - Discount and tax percent are columns on each line. The totals still show the summed discount and tax.
 - No logo, stamp, signature, «بسمه تعالی», email, or custom footer.

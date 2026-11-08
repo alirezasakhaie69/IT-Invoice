@@ -31,6 +31,7 @@ def _invoice(**kwargs):
         currency="rial",
         issue_date=date(2026, 3, 21),
         due_date=date(2026, 4, 4),
+        notes="گارانتی ۱۸ ماهه شرکتی — تحویل کالا در محل خریدار",
     )
     data.update(kwargs)
     data["lines"] = lines
@@ -57,7 +58,10 @@ def main():
         SimpleNamespace(position=2, description="Site visit", quantity=1, unit="hour", unit_price=250_000, discount=0, tax_percent=0),
     ]
     english = render_invoice_pdf(
-        _invoice(template="formal", language="en", currency="toman", lines=english_lines),
+        _invoice(
+            template="formal", language="en", currency="toman", lines=english_lines,
+            notes="18-month company warranty. Delivery at the buyer's address.",
+        ),
         _customer("Reza Mohammadi", "Isfahan, Sample Street"),
         SimpleNamespace(company="Sample Pars Co.", contact_name="Elham Karimi", phone="02100000000", address="Tehran, Example Street", tax_id="10101010101"),
     )

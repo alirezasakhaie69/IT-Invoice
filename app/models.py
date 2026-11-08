@@ -84,6 +84,7 @@ class Invoice(Base):
     issue_date: Mapped[date] = mapped_column(Date, nullable=False)
     due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     brief_note: Mapped[str] = mapped_column(String(280), nullable=False, default="")
+    notes: Mapped[str] = mapped_column(String(400), nullable=False, default="")
     delivery: Mapped[str] = mapped_column(String(16), nullable=False, default="not_sent")
     sending: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     drive_file_id: Mapped[str] = mapped_column(String(128), nullable=False, default="")

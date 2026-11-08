@@ -94,6 +94,7 @@ def render_invoice_pdf(invoice, customer, issuer) -> bytes:
         "tax": format_number(money["tax"], locale),
         "total": format_number(money["total"], locale),
         "words": amount_in_words(money["total"], invoice.currency, locale),
+        "notes": (getattr(invoice, "notes", "") or "").strip(),
         **accent_style(getattr(invoice, "accent", "")),
     }
     name = "pdf/store.html" if invoice.template == "store" else "pdf/formal.html"

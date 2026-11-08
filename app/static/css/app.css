@@ -157,6 +157,7 @@ textarea.input { min-height: 7rem; resize: vertical; }
 .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
 .hint { color: var(--muted); font-size: 0.8rem; margin: 0.25rem 0 0.75rem; }
+.notes-text { white-space: pre-line; margin-top: 0; }
 .alert { border-radius: 8px; padding: 0.7rem 0.85rem; margin-bottom: 0.8rem; border: 1px solid transparent; }
 .alert-ok { background: rgba(6, 78, 59, 0.25); color: #34d399; border-color: #10b981; }
 .alert-error { background: rgba(127, 29, 29, 0.3); color: #f87171; border-color: #ef4444; }

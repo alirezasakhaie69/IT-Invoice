@@ -26,6 +26,8 @@
   </div>
   <p><strong>{{ t('brief_note') }}:</strong> {{ invoice.brief_note or t('dash') }}</p>
   <p class="hint">{{ t('help_note') }}</p>
+  <p><strong>{{ t('invoice_notes') }}:</strong></p>
+  <p class="notes-text">{{ invoice.notes or t('dash') }}</p>
 </div>
 <div class="card table-wrap">
   <table class="data">

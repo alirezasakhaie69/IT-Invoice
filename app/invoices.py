@@ -132,6 +132,7 @@ def clone_invoice(db, source: Invoice, locale: str, today: date) -> Invoice:
         issue_date=today,
         due_date=None,
         brief_note="",
+        notes=source.notes,
         delivery="not_sent",
         sending=False,
         drive_file_id="",

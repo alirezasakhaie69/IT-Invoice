@@ -30,6 +30,9 @@
     .grand td { background: #e8e8e8; font-size: 13px; font-weight: 900; }
     .sum td { font-weight: 700; }
     .words { border: 1.5px solid #333333; border-top: none; padding: 7px 10px; display: flex; gap: 8px; font-size: 11px; }
+    .notes { border: 1.5px solid #333333; margin-top: 8px; padding: 7px 10px; }
+    .notes strong { display: block; font-size: 10.5px; margin-bottom: 2px; }
+    .notes p { margin: 0; white-space: pre-line; line-height: 1.9; color: #333333; }
   </style>
 </head>
 <body>
@@ -112,5 +115,11 @@
     </tbody>
   </table>
   <div class="words"><strong>{{ t('words_label') }}:</strong> <span>{{ words }}</span></div>
+  {% if notes %}
+  <div class="notes">
+    <strong>{{ t('notes_label') }}</strong>
+    <p>{{ notes }}</p>
+  </div>
+  {% endif %}
 </body>
 </html>

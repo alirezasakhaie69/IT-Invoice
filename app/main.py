@@ -461,6 +461,7 @@ def form_page(request, customers, invoice, values, lines, errors):
         issue_date=values["issue_date"],
         due_date=values["due_date"],
         brief_note=values["brief_note"],
+        notes=values["notes"],
         money=values["money"],
         invalid=values["invalid"],
         number=values["number"],
@@ -479,6 +480,7 @@ def empty_invoice_values(locale: str) -> dict:
         "issue_date": date.today().isoformat(),
         "due_date": "",
         "brief_note": "",
+        "notes": "",
         "money": invoice_money(SimpleNamespace(lines=[])),
         "invalid": False,
         "number": "",
@@ -529,6 +531,7 @@ def edit_invoice(request: Request, invoice_id: int):
             "issue_date": invoice.issue_date.isoformat(),
             "due_date": invoice.due_date.isoformat() if invoice.due_date else "",
             "brief_note": invoice.brief_note,
+            "notes": invoice.notes,
             "money": invoice_money(invoice),
             "invalid": False,
             "number": invoice.number,
@@ -589,6 +592,7 @@ def save_invoice(request: Request, invoice_id: int | None):
             "issue_date": form.get("issue_date"),
             "due_date": form.get("due_date"),
             "brief_note": form.get("brief_note")[:280],
+            "notes": form.get("notes").strip()[:400],
             "money": money_preview(parsed, currency)[0],
             "invalid": invalid,
             "number": form.get("number"),
@@ -618,6 +622,7 @@ def save_invoice(request: Request, invoice_id: int | None):
                 issue_date=issue,
                 due_date=due,
                 brief_note=values["brief_note"],
+                notes=values["notes"],
                 delivery="not_sent",
                 sending=False,
                 drive_file_id="",
@@ -639,6 +644,7 @@ def save_invoice(request: Request, invoice_id: int | None):
             invoice.issue_date = issue
             invoice.due_date = due
             invoice.brief_note = values["brief_note"]
+            invoice.notes = values["notes"]
             invoice.updated_at = now
         replace_lines(invoice, parsed)
         db.commit()
