@@ -196,6 +196,8 @@ STRINGS = {
         "help_bot_tokens": "توکن‌ها رمزنگاری می‌شوند و بعد از ذخیره نمایش داده نمی‌شوند. اگر اینجا خالی باشد، مقدار متغیر محیطی استفاده می‌شود.",
         "all_invoices": "همه فاکتورها",
         "customer_invoices": "فاکتورهای {name}",
+        "search_customer": "نام یا تلفن مشتری را بنویسید",
+        "confirm_delete_invoice": "این فاکتور و پرداخت‌های آن حذف شود؟",
     },
     "en": {
         "app_name": "Invoices",
@@ -394,6 +396,8 @@ STRINGS = {
         "help_bot_tokens": "Tokens are encrypted and are not shown after saving. A blank field keeps using the environment variable.",
         "all_invoices": "All invoices",
         "customer_invoices": "Invoices for {name}",
+        "search_customer": "Type a customer name or phone",
+        "confirm_delete_invoice": "Delete this invoice and its payments?",
     },
 }
 

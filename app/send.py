@@ -10,7 +10,7 @@ from sqlalchemy import update
 from app.auth import utcnow
 from app.config import bale_base, bale_token, data_dir, telegram_base, telegram_proxy, telegram_token
 from app.crypto import redact
-from app.format import format_number
+from app.format import localize_digits
 from app.i18n import translate
 from app.models import Invoice, SendLog
 from app.pdf import pdf_filename, render_invoice_pdf
@@ -108,6 +108,16 @@ def deliver(channel: str, chat_id: str, filename: str, payload: bytes, caption: 
     return False, redact(str(parsed.get("description") or f"HTTP {status}"))
 
 
+def record_send(db, invoice_id: int, channel: str, ok: bool, error: str) -> None:
+    db.add(SendLog(
+        invoice_id=invoice_id,
+        created_at=utcnow(),
+        channel=channel,
+        result="ok" if ok else "error",
+        error="" if ok else redact(error),
+    ))
+
+
 def send_invoice(db, invoice: Invoice, customer, issuer) -> str:
     locked = db.execute(
         update(Invoice).where(Invoice.id == invoice.id, Invoice.sending.is_(False)).values(sending=True)
@@ -115,9 +125,9 @@ def send_invoice(db, invoice: Invoice, customer, issuer) -> str:
     db.commit()
     if locked.rowcount != 1:
         return "send_in_progress"
+    channels: list[tuple[str, str]] = []
     try:
         db.refresh(invoice)
-        channels = []
         if customer.bale_id.strip():
             channels.append(("bale", customer.bale_id.strip()))
         if customer.telegram_id.strip():
@@ -129,20 +139,14 @@ def send_invoice(db, invoice: Invoice, customer, issuer) -> str:
         filename = pdf_filename(invoice, customer.name)
         locale = invoice.language if invoice.language in ("fa", "en") else "fa"
         title_key = "title_invoice" if invoice.doc_type == "invoice" else "title_proforma"
-        caption = f"{translate(locale, title_key)} {format_number(invoice.number, locale)}"
+        caption = f"{translate(locale, title_key)} {localize_digits(str(invoice.number), locale)}"
         all_ok = True
         for channel, chat_id in channels:
             ok, error = deliver(channel, chat_id, filename, payload, caption, channel_token(db, channel))
-            db.add(SendLog(
-                invoice_id=invoice.id,
-                created_at=utcnow(),
-                channel=channel,
-                result="ok" if ok else "error",
-                error="" if ok else error,
-            ))
+            record_send(db, invoice.id, channel, ok, error)
             if not ok:
                 all_ok = False
-                log.info("send failed on %s", channel)
+                log.info("send failed on %s: %s", channel, error)
         if all_ok:
             invoice.delivery = "sent"
         invoice.updated_at = utcnow()
@@ -150,8 +154,20 @@ def send_invoice(db, invoice: Invoice, customer, issuer) -> str:
         if all_ok:
             from app.drive import auto_save
 
-            auto_save(db, invoice, payload, filename)
+            try:
+                auto_save(db, invoice, payload, filename)
+            except Exception:
+                log.info("drive auto-save failed after send")
         return "send_ok" if all_ok else "send_failed"
+    except Exception as exc:
+        message = redact(str(exc) or type(exc).__name__)
+        targets = channels or [("bale", "")]
+        for channel, _chat_id in targets:
+            record_send(db, invoice.id, channel, False, message)
+        invoice.updated_at = utcnow()
+        db.commit()
+        log.info("send crashed: %s", type(exc).__name__)
+        return "send_failed"
     finally:
         db.execute(update(Invoice).where(Invoice.id == invoice.id).values(sending=False))
         db.commit()

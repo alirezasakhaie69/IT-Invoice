@@ -80,6 +80,10 @@
     <input type="hidden" name="csrf_token" value="{{ csrf }}">
     <button class="btn btn-tint" type="submit">{{ t('clone') }}</button>
   </form>
+  <form method="post" action="/invoices/{{ invoice.id }}/delete" onsubmit="return confirm(this.dataset.confirm)" data-confirm="{{ t('confirm_delete_invoice') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <button class="btn btn-danger" type="submit">{{ t('delete') }}</button>
+  </form>
   {% if invoice.doc_type == 'proforma' %}
   <form method="post" action="/invoices/{{ invoice.id }}/convert">
     <input type="hidden" name="csrf_token" value="{{ csrf }}">
@@ -124,7 +128,7 @@
   <form method="post" action="/invoices/{{ invoice.id }}/payments" class="grid-2" style="margin-top: 0.8rem;">
     <input type="hidden" name="csrf_token" value="{{ csrf }}">
     <div class="field"><label>{{ t('issue_date') }}</label>{{ date_field('paid_on', today, 0) }}</div>
-    <div class="field"><label>{{ t('amount') }}</label><input class="input grouped" name="amount" inputmode="numeric" required></div>
+    <div class="field"><label>{{ t('amount') }}</label><input class="input grouped" name="amount" inputmode="numeric" required value="{{ format_number(view.money.total) }}"></div>
     <div class="field"><label>{{ t('method') }}</label><input class="input" name="method"></div>
     <div class="field"><label>{{ t('note') }}</label><input class="input" name="note" maxlength="280"></div>
     <button class="btn btn-primary" type="submit">{{ t('add_payment') }}</button>

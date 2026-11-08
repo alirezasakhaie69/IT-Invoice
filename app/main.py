@@ -50,7 +50,7 @@ from app.i18n import translate
 from app.invoices import NumberTaken, book_rows, claim_number, clone_invoice, compute_line, convert_proforma, invoice_money, peek_number, present, replace_lines
 from app.models import Customer, Invoice, Issuer, Payment, SessionRow, User
 from app.pdf import FORMAL_COLORS, normalize_accent, pdf_filename
-from app.send import send_invoice, write_pdf
+from app.send import pdf_path, send_invoice, write_pdf
 
 log = logging.getLogger("invoice")
 logging.basicConfig(level=logging.INFO)
@@ -644,6 +644,20 @@ def save_invoice(request: Request, invoice_id: int | None):
         db.commit()
         target = invoice.id
     return redirect(f"/invoices/{target}?m=saved")
+
+
+@app.post("/invoices/{invoice_id}/delete")
+def delete_invoice(request: Request, invoice_id: int):
+    with session() as db:
+        invoice = db.get(Invoice, invoice_id)
+        if invoice is None:
+            return html(request, "missing.html", status_code=404)
+        db.delete(invoice)
+        db.commit()
+    path = pdf_path(invoice_id)
+    if path.is_file():
+        path.unlink()
+    return redirect("/invoices?m=deleted")
 
 
 @app.post("/invoices/{invoice_id}/clone")

@@ -36,12 +36,15 @@
     </div>
     <div class="field">
       <label>{{ t('customer') }}</label>
-      <select class="input" name="customer_id">
-        <option value="">{{ t('choose') }}</option>
-        {% for customer in customers %}
-        <option value="{{ customer.id }}" {% if selected_customer == customer.id %}selected{% endif %}>{{ customer.name }}</option>
-        {% endfor %}
-      </select>
+      <div class="combo" data-customer-combo>
+        <input class="input combo-search" type="text" autocomplete="off" placeholder="{{ t('search_customer') }}" value="{% for customer in customers %}{% if customer.id == selected_customer %}{{ customer.name }}{% endif %}{% endfor %}">
+        <input type="hidden" name="customer_id" value="{{ selected_customer or '' }}">
+        <div class="combo-list" hidden>
+          {% for customer in customers %}
+          <button type="button" class="combo-item" data-id="{{ customer.id }}" data-name="{{ customer.name }}" data-phone="{{ customer.phone }}">{{ customer.name }}{% if customer.phone %} <span>{{ customer.phone }}</span>{% endif %}</button>
+          {% endfor %}
+        </div>
+      </div>
     </div>
     <div class="field">
       <label>{{ t('doc_type') }}</label>

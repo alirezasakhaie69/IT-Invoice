@@ -36,7 +36,13 @@
         <td>{{ format_number(row.money.total) }} {{ t(invoice.currency) }}</td>
         <td>{{ format_date(invoice.issue_date) }}</td>
         <td class="note-clip" title="{{ invoice.brief_note }}">{{ invoice.brief_note or t('dash') }}</td>
-        <td><a class="btn btn-tint btn-small" href="/invoices/{{ invoice.id }}">{{ t('open') }}</a></td>
+        <td class="row-actions">
+          <a class="btn btn-tint btn-small" href="/invoices/{{ invoice.id }}">{{ t('open') }}</a>
+          <form method="post" action="/invoices/{{ invoice.id }}/delete" onsubmit="return confirm(this.dataset.confirm)" data-confirm="{{ t('confirm_delete_invoice') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <button class="btn btn-danger btn-small" type="submit">{{ t('delete') }}</button>
+          </form>
+        </td>
       </tr>
       {% endfor %}
     </tbody>
