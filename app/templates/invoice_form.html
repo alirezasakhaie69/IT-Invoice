@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% from "partials/date_field.html" import date_field with context %}
+{% block body %}
+<div class="page-head">
+  <h1>{{ t('edit_invoice') if invoice else t('new_invoice') }}</h1>
+  <a class="btn btn-ghost" href="{{ '/invoices/' ~ invoice.id if invoice else '/invoices' }}">{{ t('back') }}</a>
+</div>
+{% if errors %}
+<div class="alert alert-error">
+  {% for error in errors %}<div>{{ error }}</div>{% endfor %}
+</div>
+{% endif %}
+{% if not customers %}
+<div class="card"><p>{{ t('customer_required') }} <a href="/customers/new">{{ t('new_customer') }}</a></p></div>
+{% endif %}
+<form id="invoice-form" method="post" action="{{ '/invoices/' ~ invoice.id if invoice else '/invoices' }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+  <div class="card grid-2">
+    <div class="field">
+      <label>{{ t('customer') }}</label>
+      <select class="input" name="customer_id">
+        <option value="">{{ t('choose') }}</option>
+        {% for customer in customers %}
+        <option value="{{ customer.id }}" {% if selected_customer == customer.id %}selected{% endif %}>{{ customer.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>{{ t('doc_type') }}</label>
+      {% if invoice %}
+      <input type="hidden" name="doc_type" value="{{ doc_type }}">
+      <select class="input" disabled>
+        <option>{{ t(doc_type if doc_type == 'invoice' else 'proforma') }}</option>
+      </select>
+      {% else %}
+      <select class="input" name="doc_type">
+        <option value="invoice" {% if doc_type == 'invoice' %}selected{% endif %}>{{ t('invoice') }}</option>
+        <option value="proforma" {% if doc_type == 'proforma' %}selected{% endif %}>{{ t('proforma') }}</option>
+      </select>
+      {% endif %}
+    </div>
+    <div class="field">
+      <label>{{ t('template') }}</label>
+      <select class="input" name="template">
+        <option value="store" {% if template_name == 'store' %}selected{% endif %}>{{ t('store') }}</option>
+        <option value="formal" {% if template_name == 'formal' %}selected{% endif %}>{{ t('formal') }}</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>{{ t('pdf_language') }}</label>
+      <select class="input" name="language">
+        <option value="fa" {% if language == 'fa' %}selected{% endif %}>{{ t('persian') }}</option>
+        <option value="en" {% if language == 'en' %}selected{% endif %}>{{ t('english') }}</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>{{ t('currency') }}</label>
+      {% if invoice %}
+      <input type="hidden" name="currency" value="{{ currency }}">
+      <select class="input" disabled><option>{{ t(currency) }}</option></select>
+      {% else %}
+      <select class="input" name="currency">
+        <option value="rial" {% if currency == 'rial' %}selected{% endif %}>{{ t('rial') }}</option>
+        <option value="toman" {% if currency == 'toman' %}selected{% endif %}>{{ t('toman') }}</option>
+      </select>
+      {% endif %}
+    </div>
+    <div class="field">
+      <label>{{ t('issue_date') }}</label>
+      {{ date_field('issue_date', issue_date, 0) }}
+    </div>
+    <div class="field">
+      <label>{{ t('due_date') }}</label>
+      {{ date_field('due_date', due_date, 1) }}
+    </div>
+    <div class="field">
+      <label>{{ t('brief_note') }}</label>
+      <input class="input" name="brief_note" maxlength="280" value="{{ brief_note }}">
+      <p class="hint">{{ t('help_note') }}</p>
+    </div>
+  </div>
+  <div class="card">
+    <div id="lines">
+      {% for line in lines %}
+      {% include "partials/line_row.html" %}
+      {% endfor %}
+    </div>
+    <button class="btn btn-tint" type="button" hx-get="/invoices/line-row" hx-target="#lines" hx-swap="beforeend">{{ t('add_line') }}</button>
+    <div id="totals"
+      hx-post="/invoices/preview"
+      hx-trigger="change delay:200ms from:#invoice-form, input delay:400ms from:#invoice-form"
+      hx-include="#invoice-form"
+      hx-target="this"
+      hx-swap="innerHTML">
+      {% include "partials/totals.html" %}
+    </div>
+  </div>
+  <button class="btn btn-primary" type="submit" {% if not customers %}disabled{% endif %}>{{ t('save') }}</button>
+</form>
+{% endblock %}

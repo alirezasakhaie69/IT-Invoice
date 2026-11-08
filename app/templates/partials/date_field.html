@@ -1,0 +1,14 @@
+{% macro date_field(name, value, allow_clear=0) -%}
+<div class="date-field">
+  {% if locale == 'fa' %}
+    {% set parts = jalali_parts(value) %}
+    <input type="hidden" class="date-iso" name="{{ name }}" value="{{ value or '' }}">
+    <input class="input date-display" readonly value="{{ format_iso(value) }}"
+      hx-get="/calendar?year={{ parts[0] }}&month={{ parts[1] }}&selected={{ value or '' }}&clear={{ allow_clear }}"
+      hx-trigger="click" hx-target="next .calendar" hx-swap="outerHTML">
+    <div class="calendar"></div>
+  {% else %}
+    <input class="input" type="date" name="{{ name }}" value="{{ value or '' }}">
+  {% endif %}
+</div>
+{%- endmacro %}

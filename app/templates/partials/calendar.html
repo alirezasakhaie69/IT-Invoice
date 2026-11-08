@@ -1,0 +1,26 @@
+<div class="calendar">
+  <div class="calendar-bar">
+    <button type="button" class="btn btn-ghost btn-small"
+      hx-get="/calendar?year={{ prev_year }}&month={{ prev_month }}&selected={{ selected }}&clear={{ clear }}"
+      hx-target="closest .calendar" hx-swap="outerHTML">‹</button>
+    <strong>{{ label }}</strong>
+    <button type="button" class="btn btn-ghost btn-small"
+      hx-get="/calendar?year={{ next_year }}&month={{ next_month }}&selected={{ selected }}&clear={{ clear }}"
+      hx-target="closest .calendar" hx-swap="outerHTML">›</button>
+  </div>
+  <div class="calendar-grid">
+    {% for name in weekdays %}<span>{{ name }}</span>{% endfor %}
+    {% for cell in cells %}
+      {% if cell %}
+      <button type="button" class="day {% if cell.isoformat() == selected %}selected{% endif %}"
+        data-iso="{{ cell.isoformat() }}" data-label="{{ format_date(cell) }}"
+        onclick="pickDate(this)">{{ format_number(cell.day) }}</button>
+      {% else %}
+      <span></span>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% if clear %}
+  <button type="button" class="btn btn-ghost btn-small" onclick="clearDate(this)">{{ t('clear') }}</button>
+  {% endif %}
+</div>

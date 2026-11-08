@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "partials/date_field.html" import date_field with context %}
+{% block body %}
+<div class="page-head">
+  <h1>{{ t('summary') }}</h1>
+  <a class="btn btn-secondary" href="/summary.csv?start={{ start }}&end={{ end }}">{{ t('export_csv') }}</a>
+</div>
+<p class="hint">{{ t('summary_hint') }}</p>
+<form class="card grid-2" method="get" action="/summary">
+  <div class="field"><label>{{ t('from_date') }}</label>{{ date_field('start', start, 0) }}</div>
+  <div class="field"><label>{{ t('to_date') }}</label>{{ date_field('end', end, 0) }}</div>
+  <button class="btn btn-primary" type="submit">{{ t('apply') }}</button>
+</form>
+<div class="card">
+  <h2>{{ t('currency_group') }}</h2>
+  {% if buckets %}
+  <table class="data">
+    <thead><tr><th>{{ t('currency') }}</th><th>{{ t('issued') }}</th><th>{{ t('paid_amount') }}</th><th>{{ t('outstanding') }}</th></tr></thead>
+    <tbody>
+      {% for currency, bucket in buckets.items() %}
+      <tr>
+        <td>{{ t(currency) }}</td>
+        <td>{{ format_number(bucket.issued) }}</td>
+        <td>{{ format_number(bucket.paid) }}</td>
+        <td>{{ format_number(bucket.outstanding) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>{{ t('no_records') }}</p>
+  {% endif %}
+</div>
+<div class="card table-wrap">
+  {% if rows %}
+  <table class="data">
+    <thead>
+      <tr>
+        <th>{{ t('number') }}</th><th>{{ t('customer') }}</th><th>{{ t('currency') }}</th>
+        <th>{{ t('issue_date') }}</th><th>{{ t('issued') }}</th><th>{{ t('paid_amount') }}</th><th>{{ t('outstanding') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ format_number(row.number) }}</td>
+        <td>{{ row.customer }}</td>
+        <td>{{ t(row.currency) }}</td>
+        <td>{{ format_date(row.issue_date) }}</td>
+        <td>{{ format_number(row.total) }}</td>
+        <td>{{ format_number(row.paid) }}</td>
+        <td>{{ format_number(row.outstanding) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>{{ t('no_records') }}</p>
+  {% endif %}
+</div>
+{% endblock %}

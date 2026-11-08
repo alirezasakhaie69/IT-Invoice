@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="page-head">
+  <h1>{{ t('edit_customer') if customer else t('new_customer') }}</h1>
+  <a class="btn btn-ghost" href="/customers">{{ t('back') }}</a>
+</div>
+{% if errors %}
+<div class="alert alert-error">{% for error in errors %}<div>{{ error }}</div>{% endfor %}</div>
+{% endif %}
+<form class="card grid-2" method="post" action="{{ '/customers/' ~ customer.id ~ '/edit' if customer else '/customers' }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+  <div class="field"><label>{{ t('name') }}</label><input class="input" name="name" required value="{{ values.name }}"></div>
+  <div class="field"><label>{{ t('phone') }}</label><input class="input" name="phone" value="{{ values.phone }}"></div>
+  <div class="field"><label>{{ t('tax_id') }}</label><input class="input" name="tax_id" value="{{ values.tax_id }}"></div>
+  <div class="field"><label>{{ t('bale_id') }}</label><input class="input" name="bale_id" value="{{ values.bale_id }}"></div>
+  <div class="field"><label>{{ t('telegram_id') }}</label><input class="input" name="telegram_id" value="{{ values.telegram_id }}"></div>
+  <div class="field" style="grid-column: 1 / -1;"><label>{{ t('address') }}</label><textarea class="input" name="address">{{ values.address }}</textarea></div>
+  <p class="hint" style="grid-column: 1 / -1;">{{ t('help_bots') }}</p>
+  <button class="btn btn-primary" type="submit">{{ t('save') }}</button>
+</form>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="page-head"><h1>{{ t('settings') }}</h1></div>
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+<form method="post" action="/settings">
+  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+  <div class="card">
+    <h2>{{ t('issuer') }}</h2>
+    <div class="grid-2">
+      <div class="field"><label>{{ t('company') }}</label><input class="input" name="company" value="{{ issuer.company }}"></div>
+      <div class="field"><label>{{ t('contact_name') }}</label><input class="input" name="contact_name" value="{{ issuer.contact_name }}"></div>
+      <div class="field"><label>{{ t('phone') }}</label><input class="input" name="issuer_phone" value="{{ issuer.phone }}"></div>
+      <div class="field"><label>{{ t('tax_id') }}</label><input class="input" name="issuer_tax_id" value="{{ issuer.tax_id }}"></div>
+      <div class="field" style="grid-column: 1 / -1;"><label>{{ t('address') }}</label><textarea class="input" name="issuer_address">{{ issuer.address }}</textarea></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Google Drive</h2>
+    <p class="hint">{{ t('help_folder') }}</p>
+    <p class="hint">{{ t('help_oauth') }}</p>
+    <p class="hint">{{ t('help_service') }}</p>
+    {% if drive.last_test %}<p>{{ t('connected_as', name=drive.last_test) }}</p>{% endif %}
+    <div class="field">
+      <label>{{ t('redirect_uri') }}</label>
+      <input class="input" readonly value="{{ drive.redirect_uri }}">
+    </div>
+    <div class="grid-2">
+      <div class="field">
+        <label>{{ t('connection_mode') }}</label>
+        <select class="input" name="mode">
+          <option value="oauth" {% if drive.mode == 'oauth' %}selected{% endif %}>{{ t('oauth') }}</option>
+          <option value="service_account" {% if drive.mode == 'service_account' %}selected{% endif %}>{{ t('service_account') }}</option>
+        </select>
+      </div>
+      <div class="field"><label>{{ t('folder_template') }}</label><input class="input" name="folder_template" value="{{ drive.folder_template }}"></div>
+      <div class="field"><label>{{ t('client_id') }}</label><input class="input" name="oauth_client_id" value="{{ drive.oauth_client_id }}"></div>
+      <div class="field">
+        <label>{{ t('client_secret') }}</label>
+        <input class="input" name="oauth_client_secret" type="password" autocomplete="off" placeholder="{{ t('configured') if drive.has_secret else '' }}">
+        <p class="hint">{{ t('leave_secret') }}</p>
+      </div>
+      <div class="field"><label>{{ t('shared_drive_id') }}</label><input class="input" name="shared_drive_id" value="{{ drive.shared_drive_id }}"></div>
+      <div class="field">
+        <label>{{ t('connected') }}</label>
+        <p>{{ t('connected') if drive.connected else t('not_connected') }}</p>
+      </div>
+      <div class="field" style="grid-column: 1 / -1;">
+        <label>{{ t('service_account_json') }} — {{ t('configured') if drive.has_service_account else t('not_configured') }}</label>
+        <textarea class="input" name="service_account_json" placeholder="{{ t('leave_secret') }}"></textarea>
+      </div>
+    </div>
+    <label><input type="checkbox" name="auto_save" {% if drive.auto_save_on_send %}checked{% endif %}> {{ t('auto_save') }}</label>
+  </div>
+  <div class="actions">
+    <button class="btn btn-primary" name="action" value="save" type="submit">{{ t('save') }}</button>
+    <button class="btn btn-secondary" name="action" value="test" type="submit">{{ t('test_connection') }}</button>
+    <button class="btn btn-tint" name="action" value="connect" type="submit">{{ t('connect_google') }}</button>
+  </div>
+</form>
+{% endblock %}

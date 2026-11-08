@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% from "partials/badges.html" import badge %}
+{% from "partials/date_field.html" import date_field with context %}
+{% block body %}
+{% set invoice = view.invoice %}
+<div class="page-head">
+  <h1>{{ t(invoice.doc_type if invoice.doc_type == 'invoice' else 'proforma') }} {{ format_number(invoice.number) }}</h1>
+  <a class="btn btn-ghost" href="/invoices">{{ t('back') }}</a>
+</div>
+<div class="badges" style="margin-bottom: 1rem;">
+  {{ badge(invoice.doc_type if invoice.doc_type == 'invoice' else 'proforma', t(invoice.doc_type if invoice.doc_type == 'invoice' else 'proforma')) }}
+  {{ badge('sent' if invoice.delivery == 'sent' else 'unsent', t(invoice.delivery)) }}
+  {{ badge(view.pay_status, t(view.pay_status)) }}
+</div>
+<div class="card">
+  <div class="grid-2">
+    <p><strong>{{ t('customer') }}:</strong> {{ invoice.customer.name }}</p>
+    <p><strong>{{ t('currency') }}:</strong> {{ t(invoice.currency) }}</p>
+    <p><strong>{{ t('issue_date') }}:</strong> {{ format_date(invoice.issue_date) }}</p>
+    <p><strong>{{ t('due_date') }}:</strong> {{ format_date(invoice.due_date) or t('dash') }}</p>
+    <p><strong>{{ t('template') }}:</strong> {{ t(invoice.template) }}</p>
+    <p><strong>{{ t('pdf_language') }}:</strong> {{ t('persian') if invoice.language == 'fa' else t('english') }}</p>
+    {% if invoice.doc_type == 'invoice' and invoice.proforma_number %}
+    <p><strong>{{ t('proforma_ref') }}:</strong> {{ format_number(invoice.proforma_number) }}</p>
+    {% endif %}
+  </div>
+  <p><strong>{{ t('brief_note') }}:</strong> {{ invoice.brief_note or t('dash') }}</p>
+  <p class="hint">{{ t('help_note') }}</p>
+</div>
+<div class="card table-wrap">
+  <table class="data">
+    <thead>
+      <tr>
+        <th>{{ t('row') }}</th>
+        <th>{{ t('description') }}</th>
+        <th>{{ t('quantity') }}</th>
+        <th>{{ t('unit') }}</th>
+        <th>{{ t('unit_price') }}</th>
+        <th>{{ t('discount') }}</th>
+        <th>{{ t('tax_percent') }}</th>
+        <th>{{ t('line_total') }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in view.line_views %}
+      <tr>
+        <td>{{ format_number(item.line.position) }}</td>
+        <td>{{ item.line.description }}</td>
+        <td>{{ format_number(item.line.quantity) }}</td>
+        <td>{{ item.line.unit }}</td>
+        <td>{{ format_number(item.line.unit_price) }}</td>
+        <td>{{ format_number(item.line.discount) }}</td>
+        <td>{{ format_number(item.line.tax_percent) }}</td>
+        <td>{{ format_number(item.total) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="totals">
+    <div><span>{{ t('subtotal') }}</span><span>{{ format_number(view.money.gross) }}</span></div>
+    <div><span>{{ t('discount_total') }}</span><span>{{ format_number(view.money.discount) }}</span></div>
+    <div><span>{{ t('tax_total') }}</span><span>{{ format_number(view.money.tax) }}</span></div>
+    <div><span>{{ t('payable') }}</span><span>{{ format_number(view.money.total) }} {{ t(invoice.currency) }}</span></div>
+    <div><span>{{ t('paid_amount') }}</span><span>{{ format_number(view.paid) }}</span></div>
+    <div><span>{{ t('outstanding') }}</span><span>{{ format_number(view.outstanding) }}</span></div>
+  </div>
+</div>
+<div class="card actions">
+  <a class="btn btn-secondary" href="/invoices/{{ invoice.id }}/edit">{{ t('edit') }}</a>
+  <a class="btn btn-secondary" href="/invoices/{{ invoice.id }}/pdf">{{ t('download_pdf') }}</a>
+  <form method="post" action="/invoices/{{ invoice.id }}/send">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <button class="btn btn-primary" type="submit">{{ t('send') }}</button>
+  </form>
+  <form method="post" action="/invoices/{{ invoice.id }}/drive">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <button class="btn btn-secondary" type="submit">{{ t('save_drive') }}</button>
+  </form>
+  <form method="post" action="/invoices/{{ invoice.id }}/clone">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <button class="btn btn-tint" type="submit">{{ t('clone') }}</button>
+  </form>
+  {% if invoice.doc_type == 'proforma' %}
+  <form method="post" action="/invoices/{{ invoice.id }}/convert">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <button class="btn btn-primary" type="submit">{{ t('convert') }}</button>
+  </form>
+  {% endif %}
+  <form method="post" action="/invoices/{{ invoice.id }}/delivery">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <button class="btn btn-tint" name="delivery" value="sent" type="submit">{{ t('mark_sent') }}</button>
+    <button class="btn btn-secondary" name="delivery" value="not_sent" type="submit">{{ t('mark_unsent') }}</button>
+  </form>
+</div>
+<p class="hint">{{ t('help_bots') }} {{ t('help_retry') }}</p>
+{% if invoice.drive_error %}
+<div class="alert alert-error"><strong>{{ t('drive_last_error') }}:</strong> {{ invoice.drive_error }}</div>
+{% endif %}
+<div class="card">
+  <h2>{{ t('payments') }}</h2>
+  {% if invoice.payments %}
+  <table class="data">
+    <thead><tr><th>{{ t('issue_date') }}</th><th>{{ t('amount') }}</th><th>{{ t('method') }}</th><th>{{ t('note') }}</th><th></th></tr></thead>
+    <tbody>
+      {% for payment in invoice.payments %}
+      <tr>
+        <td>{{ format_date(payment.paid_on) }}</td>
+        <td>{{ format_number(payment.amount) }}</td>
+        <td>{{ payment.method or t('dash') }}</td>
+        <td>{{ payment.note or t('dash') }}</td>
+        <td>
+          <form method="post" action="/invoices/{{ invoice.id }}/payments/{{ payment.id }}/delete">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <button class="btn btn-danger btn-small" type="submit">{{ t('delete') }}</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>{{ t('no_records') }}</p>
+  {% endif %}
+  <form method="post" action="/invoices/{{ invoice.id }}/payments" class="grid-2" style="margin-top: 0.8rem;">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <div class="field"><label>{{ t('issue_date') }}</label>{{ date_field('paid_on', today, 0) }}</div>
+    <div class="field"><label>{{ t('amount') }}</label><input class="input grouped" name="amount" inputmode="numeric" required></div>
+    <div class="field"><label>{{ t('method') }}</label><input class="input" name="method"></div>
+    <div class="field"><label>{{ t('note') }}</label><input class="input" name="note" maxlength="280"></div>
+    <button class="btn btn-primary" type="submit">{{ t('add_payment') }}</button>
+  </form>
+</div>
+<div class="card">
+  <h2>{{ t('send_log') }}</h2>
+  {% if invoice.send_logs %}
+  <table class="data">
+    <thead><tr><th>{{ t('time') }}</th><th>{{ t('channel') }}</th><th>{{ t('result') }}</th><th>{{ t('error') }}</th></tr></thead>
+    <tbody>
+      {% for entry in invoice.send_logs|reverse %}
+      <tr>
+        <td>{{ format_timestamp(entry.created_at) }}</td>
+        <td>{{ t(entry.channel) }}</td>
+        <td>{{ badge('paid' if entry.result == 'ok' else 'error', t('ok') if entry.result == 'ok' else t('failed')) }}</td>
+        <td>{{ entry.error or t('dash') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>{{ t('no_records') }}</p>
+  {% endif %}
+</div>
+{% endblock %}

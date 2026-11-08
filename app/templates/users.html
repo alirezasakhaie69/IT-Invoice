@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "partials/badges.html" import badge %}
+{% block body %}
+<div class="page-head">
+  <h1>{{ t('users') }}</h1>
+  <a class="btn btn-primary" href="/users/new">{{ t('new_user') }}</a>
+</div>
+<div class="card table-wrap">
+  <table class="data">
+    <thead><tr><th>{{ t('username') }}</th><th>{{ t('role') }}</th><th>{{ t('language') }}</th><th></th></tr></thead>
+    <tbody>
+      {% for person in people %}
+      <tr>
+        <td>{{ person.username }}</td>
+        <td>{{ badge('neutral', t(person.role)) }}</td>
+        <td>{{ t('persian') if person.locale == 'fa' else t('english') }}</td>
+        <td class="actions">
+          <a class="btn btn-tint btn-small" href="/users/{{ person.id }}/edit">{{ t('edit') }}</a>
+          <form method="post" action="/users/{{ person.id }}/delete">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <button class="btn btn-danger btn-small" type="submit">{{ t('delete') }}</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

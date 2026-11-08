@@ -1,0 +1,9 @@
+<div class="line-row">
+  <div><label>{{ t('description') }}</label><input class="input" name="description" value="{{ line.description }}"></div>
+  <div><label>{{ t('quantity') }}</label><input class="input grouped" name="quantity" inputmode="numeric" value="{{ line.quantity }}"></div>
+  <div><label>{{ t('unit') }}</label><input class="input" name="unit" value="{{ line.unit }}"></div>
+  <div><label>{{ t('unit_price') }}</label><input class="input grouped" name="unit_price" inputmode="numeric" value="{{ line.unit_price }}"></div>
+  <div><label>{{ t('discount') }}</label><input class="input grouped" name="discount" inputmode="numeric" value="{{ line.discount }}"></div>
+  <div><label>{{ t('tax_percent') }}</label><input class="input grouped" name="tax_percent" inputmode="numeric" value="{{ line.tax_percent }}"></div>
+  <button class="btn btn-danger btn-small" type="button" onclick="this.closest('.line-row').remove()">{{ t('remove') }}</button>
+</div>

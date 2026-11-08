@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="page-head">
+  <h1>{{ t('edit_user') if person else t('new_user') }}</h1>
+  <a class="btn btn-ghost" href="/users">{{ t('back') }}</a>
+</div>
+{% if errors %}
+<div class="alert alert-error">{% for error in errors %}<div>{{ error }}</div>{% endfor %}</div>
+{% endif %}
+<form class="card grid-2" method="post" action="{{ '/users/' ~ person.id ~ '/edit' if person else '/users' }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+  <div class="field"><label>{{ t('username') }}</label><input class="input" name="username" required value="{{ values.username }}"></div>
+  <div class="field">
+    <label>{{ t('password') }}</label>
+    <input class="input" name="password" type="password" autocomplete="new-password" {% if not person %}required{% endif %}>
+    {% if person %}<p class="hint">{{ t('password_blank') }}</p>{% endif %}
+  </div>
+  <div class="field">
+    <label>{{ t('role') }}</label>
+    <select class="input" name="role">
+      <option value="user" {% if values.role == 'user' %}selected{% endif %}>{{ t('user') }}</option>
+      <option value="admin" {% if values.role == 'admin' %}selected{% endif %}>{{ t('admin') }}</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>{{ t('language') }}</label>
+    <select class="input" name="locale">
+      <option value="fa" {% if values.locale == 'fa' %}selected{% endif %}>{{ t('persian') }}</option>
+      <option value="en" {% if values.locale == 'en' %}selected{% endif %}>{{ t('english') }}</option>
+    </select>
+  </div>
+  <button class="btn btn-primary" type="submit">{{ t('save') }}</button>
+</form>
+{% endblock %}

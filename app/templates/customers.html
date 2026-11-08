@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="page-head">
+  <h1>{{ t('customers') }}</h1>
+  <a class="btn btn-primary" href="/customers/new">{{ t('new_customer') }}</a>
+</div>
+<div class="card table-wrap">
+  {% if customers %}
+  <table class="data">
+    <thead>
+      <tr>
+        <th>{{ t('name') }}</th><th>{{ t('phone') }}</th><th>{{ t('tax_id') }}</th>
+        <th>{{ t('bale_id') }}</th><th>{{ t('telegram_id') }}</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for customer in customers %}
+      <tr>
+        <td>{{ customer.name }}</td>
+        <td>{{ customer.phone or t('dash') }}</td>
+        <td>{{ customer.tax_id or t('dash') }}</td>
+        <td>{{ customer.bale_id or t('dash') }}</td>
+        <td>{{ customer.telegram_id or t('dash') }}</td>
+        <td class="actions">
+          <a class="btn btn-tint btn-small" href="/customers/{{ customer.id }}/edit">{{ t('edit') }}</a>
+          <form method="post" action="/customers/{{ customer.id }}/delete">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <button class="btn btn-danger btn-small" type="submit">{{ t('delete') }}</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>{{ t('no_records') }}</p>
+  {% endif %}
+</div>
+{% endblock %}

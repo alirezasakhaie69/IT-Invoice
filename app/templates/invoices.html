@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "partials/badges.html" import badge %}
+{% block body %}
+<div class="page-head">
+  <h1>{{ t('invoices') }}</h1>
+  <a class="btn btn-primary" href="/invoices/new">{{ t('new_invoice') }}</a>
+</div>
+<div class="card table-wrap">
+  {% if rows %}
+  <table class="data">
+    <thead>
+      <tr>
+        <th>{{ t('number') }}</th>
+        <th>{{ t('customer') }}</th>
+        <th>{{ t('document') }}</th>
+        <th>{{ t('delivery') }}</th>
+        <th>{{ t('payment_state') }}</th>
+        <th>{{ t('total') }}</th>
+        <th>{{ t('issue_date') }}</th>
+        <th>{{ t('brief_note') }}</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      {% set invoice = row.invoice %}
+      <tr>
+        <td>{{ format_number(invoice.number) }}</td>
+        <td>{{ invoice.customer.name }}</td>
+        <td>{{ badge(invoice.doc_type if invoice.doc_type == 'invoice' else 'proforma', t(invoice.doc_type if invoice.doc_type == 'invoice' else 'proforma')) }}</td>
+        <td>{{ badge('sent' if invoice.delivery == 'sent' else 'unsent', t(invoice.delivery)) }}</td>
+        <td>{{ badge(row.pay_status, t(row.pay_status)) }}</td>
+        <td>{{ format_number(row.money.total) }} {{ t(invoice.currency) }}</td>
+        <td>{{ format_date(invoice.issue_date) }}</td>
+        <td class="note-clip" title="{{ invoice.brief_note }}">{{ invoice.brief_note or t('dash') }}</td>
+        <td><a class="btn btn-tint btn-small" href="/invoices/{{ invoice.id }}">{{ t('open') }}</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>{{ t('no_records') }}</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,9 @@
+<div class="totals">
+  <div><dt>{{ t('subtotal') }}</dt><dd>{{ format_number(money.gross) }} {{ t(currency) }}</dd></div>
+  <div><dt>{{ t('discount_total') }}</dt><dd>{{ format_number(money.discount) }}</dd></div>
+  <div><dt>{{ t('tax_total') }}</dt><dd>{{ format_number(money.tax) }}</dd></div>
+  <div><dt>{{ t('payable') }}</dt><dd>{{ format_number(money.total) }} {{ t(currency) }}</dd></div>
+</div>
+{% if invalid %}
+<p class="alert alert-error">{{ t('line_invalid') }}</p>
+{% endif %}

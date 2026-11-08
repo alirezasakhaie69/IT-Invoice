@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="{{ locale }}" dir="{{ 'rtl' if locale == 'fa' else 'ltr' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ t('app_name') }}</title>
+  <link rel="icon" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/js/htmx.min.js" defer></script>
+  <script src="/static/js/app.js" defer></script>
+</head>
+<body data-csrf="{{ csrf }}">
+  {% if user %}
+  <header class="topbar">
+    <a class="brand" href="/invoices">{{ t('app_name') }}</a>
+    <nav class="nav">
+      <a class="btn btn-ghost" href="/invoices">{{ t('invoices') }}</a>
+      <a class="btn btn-ghost" href="/customers">{{ t('customers') }}</a>
+      <a class="btn btn-ghost" href="/summary">{{ t('summary') }}</a>
+      {% if user.role == 'admin' %}
+      <a class="btn btn-ghost" href="/users">{{ t('users') }}</a>
+      <a class="btn btn-ghost" href="/settings">{{ t('settings') }}</a>
+      {% endif %}
+      <form method="post" action="/locale">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <input type="hidden" name="locale" value="{{ 'en' if locale == 'fa' else 'fa' }}">
+        <button class="btn btn-ghost" type="submit">{{ t('english') if locale == 'fa' else t('persian') }}</button>
+      </form>
+      <form method="post" action="/logout">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <button class="btn btn-ghost" type="submit">{{ t('logout') }}</button>
+      </form>
+    </nav>
+  </header>
+  {% endif %}
+  <main class="wrap">
+    {% if message %}
+    <div class="alert {{ 'alert-error' if message_error else 'alert-ok' }}">{{ t(message) }}</div>
+    {% endif %}
+    {% block body %}{% endblock %}
+  </main>
+</body>
+</html>
