@@ -2,6 +2,7 @@ import unittest
 from types import SimpleNamespace
 
 from app.format import format_input, format_number, parse_int
+from app.drive import drive_is_pending, mark_drive_pending
 from app.pdf import DEFAULT_ACCENT, normalize_accent, seller_heading
 
 
@@ -26,6 +27,15 @@ class StoreNameTest(unittest.TestCase):
         self.assertEqual(hidden, "الهام")
         self.assertEqual(normalize_accent(""), DEFAULT_ACCENT)
         self.assertEqual(DEFAULT_ACCENT, "#ea580c")
+
+
+class DrivePendingTest(unittest.TestCase):
+    def test_pending_expires(self):
+        marker = mark_drive_pending()
+        started = int(marker.split(":", 1)[1])
+        self.assertTrue(drive_is_pending(marker, started + 10))
+        self.assertFalse(drive_is_pending(marker, started + 601))
+        self.assertFalse(drive_is_pending("HTTP 504"))
 
 
 if __name__ == "__main__":

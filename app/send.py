@@ -1,6 +1,8 @@
+import http.client
 import json
 import logging
 import secrets
+import socket
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -18,11 +20,60 @@ from app.pdf import pdf_filename, render_invoice_pdf
 log = logging.getLogger("invoice")
 
 
-def exchange(url, *, method="GET", data=None, headers=None, timeout=60, proxy=None):
+def connect_prefer_ipv4(host: str, port: int, timeout):
+    """Try IPv4 before IPv6. A dead IPv6 route can stall each Google call for minutes."""
+    read_timeout = 60 if timeout is None or timeout is socket._GLOBAL_DEFAULT_TIMEOUT else timeout
+    connect_timeout = min(8, read_timeout)
+    errors: list[OSError] = []
+    for family in (socket.AF_INET, socket.AF_INET6):
+        try:
+            infos = socket.getaddrinfo(host, port, family, socket.SOCK_STREAM)
+        except socket.gaierror as exc:
+            errors.append(exc)
+            continue
+        for fam, socktype, proto, _canon, sockaddr in infos:
+            sock = socket.socket(fam, socktype, proto)
+            sock.settimeout(connect_timeout)
+            try:
+                sock.connect(sockaddr)
+                sock.settimeout(read_timeout)
+                return sock
+            except OSError as exc:
+                errors.append(exc)
+                sock.close()
+    raise OSError(errors[-1] if errors else f"could not connect to {host}")
+
+
+class _IPv4HTTPSConnection(http.client.HTTPSConnection):
+    def connect(self):
+        import errno
+        import sys
+
+        sys.audit("http.client.connect", self, self.host, self.port)
+        self.sock = connect_prefer_ipv4(self.host, self.port, self.timeout)
+        try:
+            self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        except OSError as exc:
+            if exc.errno != errno.ENOPROTOOPT:
+                raise
+        if self._tunnel_host:
+            self._tunnel()
+        server_hostname = self._tunnel_host or self.host
+        self.sock = self._context.wrap_socket(self.sock, server_hostname=server_hostname)
+
+
+class _IPv4HTTPSHandler(urllib.request.HTTPSHandler):
+    def https_open(self, request):
+        return self.do_open(_IPv4HTTPSConnection, request, context=self._context)
+
+
+def exchange(url, *, method="GET", data=None, headers=None, timeout=60, proxy=None, prefer_ipv4=False):
     request = urllib.request.Request(url, data=data, headers=headers or {}, method=method)
     handlers = []
     if proxy:
         handlers.append(urllib.request.ProxyHandler({"http": proxy, "https": proxy}))
+    elif prefer_ipv4:
+        handlers.append(_IPv4HTTPSHandler())
     opener = urllib.request.build_opener(*handlers)
     try:
         with opener.open(request, timeout=timeout) as response:

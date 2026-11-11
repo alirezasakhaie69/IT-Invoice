@@ -133,11 +133,32 @@ def parse_state(state: str, user_id: int, max_age: int = 600) -> bool:
     return hmac.compare_digest(expected, mac)
 
 
+def mark_drive_pending() -> str:
+    return f"pending:{int(time.time())}"
+
+
+def drive_is_pending(value: str, now: float | None = None) -> bool:
+    now = time.time() if now is None else now
+    if not (value or "").startswith("pending:"):
+        return False
+    try:
+        started = int(value.split(":", 1)[1])
+    except ValueError:
+        return False
+    return 0 <= now - started < 600
+
+
 def _post_form(url: str, fields: dict) -> dict:
     from app.send import exchange
 
     body = urllib.parse.urlencode(fields).encode()
-    status, raw = exchange(url, method="POST", data=body, headers={"Content-Type": "application/x-www-form-urlencoded"})
+    status, raw = exchange(
+        url,
+        method="POST",
+        data=body,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        prefer_ipv4=True,
+    )
     try:
         parsed = json.loads(raw.decode() or "{}")
     except json.JSONDecodeError:
@@ -238,7 +259,7 @@ def _api(method: str, url: str, token: str, body: bytes | None = None, content_t
     headers = {"Authorization": f"Bearer {token}"}
     if content_type:
         headers["Content-Type"] = content_type
-    status, raw = exchange(url, method=method, data=body, headers=headers, timeout=120)
+    status, raw = exchange(url, method=method, data=body, headers=headers, timeout=120, prefer_ipv4=True)
     try:
         parsed = json.loads(raw.decode() or "{}")
     except json.JSONDecodeError:

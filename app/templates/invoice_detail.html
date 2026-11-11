@@ -76,7 +76,7 @@
   </form>
   <form method="post" action="/invoices/{{ invoice.id }}/drive">
     <input type="hidden" name="csrf_token" value="{{ csrf }}">
-    <button class="btn btn-secondary" type="submit">{{ t('save_drive') }}</button>
+    <button class="btn btn-secondary" type="submit" {% if drive_pending %}disabled{% endif %}>{{ t('save_drive') }}</button>
   </form>
   <form method="post" action="/invoices/{{ invoice.id }}/clone">
     <input type="hidden" name="csrf_token" value="{{ csrf }}">
@@ -99,7 +99,12 @@
   </form>
 </div>
 <p class="hint">{{ t('help_bots') }} {{ t('help_retry') }}</p>
-{% if invoice.drive_error %}
+{% if drive_pending %}
+<div class="alert alert-ok">{{ t('drive_saving') }}</div>
+<script>setTimeout(function () { location.replace(location.pathname); }, 3000);</script>
+{% elif invoice.drive_error and invoice.drive_error.startswith('pending:') %}
+<div class="alert alert-error">{{ t('drive_stale') }}</div>
+{% elif invoice.drive_error %}
 <div class="alert alert-error"><strong>{{ t('drive_last_error') }}:</strong> {{ invoice.drive_error }}</div>
 {% endif %}
 <div class="card">

@@ -2,6 +2,7 @@ import csv
 import io
 import json
 import logging
+import threading
 from contextlib import asynccontextmanager, contextmanager
 from datetime import date
 from types import SimpleNamespace
@@ -44,7 +45,19 @@ from app.dates import (
     weekday_labels,
 )
 from app.db import SessionLocal
-from app.drive import apply_form, authorization_url, exchange_code, load_drive, parse_state, public_view, save_drive, test_connection, upload_pdf
+from app.drive import (
+    apply_form,
+    authorization_url,
+    drive_is_pending,
+    exchange_code,
+    load_drive,
+    mark_drive_pending,
+    parse_state,
+    public_view,
+    save_drive,
+    test_connection,
+    upload_pdf,
+)
 from app.format import format_input, format_number, localize_digits, parse_int
 from app.i18n import translate
 from app.invoices import NumberTaken, book_rows, claim_number, clone_invoice, compute_line, convert_proforma, invoice_money, peek_number, present, replace_lines
@@ -61,7 +74,7 @@ TEMPLATES = Environment(
 )
 FLASH = {
     "saved", "deleted", "send_ok", "send_failed", "no_channel", "send_in_progress",
-    "drive_ok", "drive_failed", "test_ok", "test_failed", "connected_msg", "converted",
+    "drive_ok", "drive_failed", "drive_started", "test_ok", "test_failed", "connected_msg", "converted",
     "customer_in_use", "cannot_delete_self", "cannot_delete_last_admin", "username_taken",
     "date_invalid",
 }
@@ -523,7 +536,13 @@ def invoice_detail(request: Request, invoice_id: int):
             return html(request, "missing.html", status_code=404)
         view = present(invoice)
         today = date.today().isoformat()
-        return html(request, "invoice_detail.html", view=view, today=today)
+        return html(
+            request,
+            "invoice_detail.html",
+            view=view,
+            today=today,
+            drive_pending=drive_is_pending(invoice.drive_error),
+        )
 
 
 @app.get("/invoices/{invoice_id}/edit")
@@ -787,23 +806,48 @@ def send_route(request: Request, invoice_id: int):
     return redirect(f"/invoices/{invoice_id}?m={code}")
 
 
+def _save_drive(invoice_id: int) -> None:
+    try:
+        with session() as db:
+            invoice = load_invoice(db, invoice_id)
+            if invoice is None:
+                return
+            path = write_pdf(invoice, invoice.customer, get_issuer(db))
+            invoice.drive_file_id = upload_pdf(
+                db,
+                invoice,
+                path.read_bytes(),
+                pdf_filename(invoice, invoice.customer.name if invoice.customer else ""),
+            )
+            invoice.drive_error = ""
+            invoice.updated_at = utcnow()
+            db.commit()
+    except Exception as exc:
+        log.info("drive save failed: %s", type(exc).__name__)
+        try:
+            with session() as db:
+                invoice = db.get(Invoice, invoice_id)
+                if invoice is not None:
+                    invoice.drive_error = redact(str(exc)) or type(exc).__name__
+                    invoice.updated_at = utcnow()
+                    db.commit()
+        except Exception:
+            log.info("drive error was not stored")
+
+
 @app.post("/invoices/{invoice_id}/drive")
 def drive_route(request: Request, invoice_id: int):
     with session() as db:
         invoice = load_invoice(db, invoice_id)
         if invoice is None:
             return html(request, "missing.html", status_code=404)
-        try:
-            path = write_pdf(invoice, invoice.customer, get_issuer(db))
-            invoice.drive_file_id = upload_pdf(db, invoice, path.read_bytes(), pdf_filename(invoice, invoice.customer.name if invoice.customer else ""))
-            invoice.drive_error = ""
-            code = "drive_ok"
-        except Exception as exc:
-            invoice.drive_error = redact(str(exc))
-            code = "drive_failed"
+        if drive_is_pending(invoice.drive_error):
+            return redirect(f"/invoices/{invoice_id}?m=drive_started")
+        invoice.drive_error = mark_drive_pending()
         invoice.updated_at = utcnow()
         db.commit()
-    return redirect(f"/invoices/{invoice_id}?m={code}")
+    threading.Thread(target=_save_drive, args=(invoice_id,), daemon=True).start()
+    return redirect(f"/invoices/{invoice_id}?m=drive_started")
 
 
 @app.get("/customers")
