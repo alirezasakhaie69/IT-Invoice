@@ -55,15 +55,7 @@ def render_invoice_pdf(invoice, customer, issuer) -> bytes:
             "tax_percent": format_number(line.tax_percent, locale),
             "total": format_number(part["total"], locale),
         })
-    seller_rows = []
-    seller_title = issuer.company or issuer.contact_name or translate(locale, "empty_seller")
-    if issuer.company and issuer.contact_name:
-        seller_rows.append((translate(locale, "contact"), issuer.contact_name))
-    seller_rows.extend([
-        (translate(locale, "tax_id"), issuer.tax_id),
-        (translate(locale, "phone"), issuer.phone),
-        (translate(locale, "address"), issuer.address),
-    ])
+    seller_title, seller_rows = seller_heading(invoice, issuer, locale)
     buyer_rows = [
         (translate(locale, "tax_id"), customer.tax_id),
         (translate(locale, "phone"), customer.phone),
@@ -103,18 +95,38 @@ def render_invoice_pdf(invoice, customer, issuer) -> bytes:
     return HTML(string=html, base_url=str(FONT_DIR)).write_pdf()
 
 
+DEFAULT_ACCENT = "#ea580c"
 FORMAL_COLORS = (
     ("red", "#dc2626"),
     ("blue", "#2563eb"),
-    ("orange", "#ea580c"),
+    ("orange", DEFAULT_ACCENT),
     ("green", "#16a34a"),
     ("teal", "#0d9488"),
 )
 _FORMAL_HEX = {color.lower(): color for _name, color in FORMAL_COLORS}
 
 
+def seller_heading(invoice, issuer, locale: str) -> tuple[str, list[tuple[str, str]]]:
+    show_store = getattr(invoice, "show_store_name", True)
+    show_store = True if show_store is None else bool(show_store)
+    company = (getattr(issuer, "company", "") or "").strip() if show_store else ""
+    contact = (getattr(issuer, "contact_name", "") or "").strip()
+    title = company or contact
+    if show_store and not title:
+        title = translate(locale, "empty_seller")
+    rows: list[tuple[str, str]] = []
+    if show_store and company and contact:
+        rows.append((translate(locale, "contact"), contact))
+    rows.extend([
+        (translate(locale, "tax_id"), getattr(issuer, "tax_id", "") or ""),
+        (translate(locale, "phone"), getattr(issuer, "phone", "") or ""),
+        (translate(locale, "address"), getattr(issuer, "address", "") or ""),
+    ])
+    return title, rows
+
+
 def normalize_accent(value: str) -> str:
-    return _FORMAL_HEX.get((value or "").strip().lower(), "#2563eb")
+    return _FORMAL_HEX.get((value or "").strip().lower(), DEFAULT_ACCENT)
 
 
 def accent_style(value: str) -> dict:

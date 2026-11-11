@@ -38,7 +38,7 @@
 <body>
   <div class="mast">
     <div>
-      <div class="brand">{{ seller.title }}</div>
+      {% if seller.title %}<div class="brand">{{ seller.title }}</div>{% endif %}
     </div>
     <div class="title-box">{{ title }}</div>
     <table class="meta">
@@ -51,7 +51,7 @@
   <div class="party">
     <div class="party-label">{{ t('seller') if loop.first else t('buyer') }}</div>
     <div class="party-body">
-      <span><em>{{ t('name') }}:</em> <strong>{{ party.title }}</strong></span>
+      {% if party.title %}<span><em>{{ t('name') }}:</em> <strong>{{ party.title }}</strong></span>{% endif %}
       {% for label, value in party.rows %}
       <span><em>{{ label }}:</em> <strong>{{ value or t('dash') }}</strong></span>
       {% endfor %}

@@ -61,6 +61,12 @@
       {% endif %}
     </div>
     <div class="field">
+      <label class="check">
+        <input type="checkbox" name="show_store_name" value="on" {% if show_store_name %}checked{% endif %}>
+        {{ t('show_store_name') }}
+      </label>
+    </div>
+    <div class="field">
       <label>{{ t('template') }}</label>
       <select class="input" name="template">
         <option value="store" {% if template_name == 'store' %}selected{% endif %}>{{ t('store') }}</option>

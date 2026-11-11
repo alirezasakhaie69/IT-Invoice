@@ -24,7 +24,7 @@ def _invoice(**kwargs):
     data = dict(
         doc_type="invoice",
         number="1405-012",
-        accent="#2563eb",
+        accent="#ea580c",
         proforma_number=None,
         template="store",
         language="fa",

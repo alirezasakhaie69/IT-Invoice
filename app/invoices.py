@@ -125,7 +125,8 @@ def clone_invoice(db, source: Invoice, locale: str, today: date) -> Invoice:
         number=number,
         proforma_number=number if source.doc_type == "proforma" else None,
         template=source.template,
-        accent=getattr(source, "accent", None) or "#2563eb",
+        accent=getattr(source, "accent", None) or "#ea580c",
+        show_store_name=bool(getattr(source, "show_store_name", True)),
         language=locale if locale in ("fa", "en") else "fa",
         customer_id=source.customer_id,
         currency=source.currency,
@@ -167,13 +168,16 @@ def convert_proforma(db, invoice: Invoice) -> None:
     db.flush()
 
 
-def book_rows(db, start: date, end: date) -> tuple[list[dict], dict]:
-    invoices = db.scalars(
+def book_rows(db, start: date, end: date, customer_id: int | None = None) -> tuple[list[dict], dict]:
+    stmt = (
         select(Invoice)
         .where(Invoice.doc_type == "invoice", Invoice.issue_date >= start, Invoice.issue_date <= end)
         .options(selectinload(Invoice.lines), selectinload(Invoice.payments), selectinload(Invoice.customer))
         .order_by(Invoice.issue_date, Invoice.number)
-    ).unique().all()
+    )
+    if customer_id:
+        stmt = stmt.where(Invoice.customer_id == customer_id)
+    invoices = db.scalars(stmt).unique().all()
     rows = []
     buckets: dict[str, dict[str, int]] = {}
     for invoice in invoices:

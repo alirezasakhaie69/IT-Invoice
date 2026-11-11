@@ -112,7 +112,7 @@ Uploads send `supportsAllDrives=true`. Files are created with `POST https://www.
 
 ## PDF
 
-Each invoice is Store (monochrome pad) or Formal (blue `#2563eb`). Both are A4, use the vendored Vazirmatn font, and follow the invoice language. The sheet is white. The application around it is dark only.
+Each invoice is Store (monochrome pad) or Formal. A new formal invoice starts orange (`#ea580c`). Both are A4, use the vendored Vazirmatn font, and follow the invoice language. The sheet is white. The application around it is dark only. The store name is printed unless “Show store name on the invoice” is turned off.
 
 Deviations from the [Factor-Builder](https://github.com/Alirewa/Factor-Builder) templates:
 

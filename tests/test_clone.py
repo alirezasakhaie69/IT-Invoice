@@ -67,6 +67,7 @@ class CloneTest(unittest.TestCase):
 
     def test_clone_resets_delivery_payment_and_dates(self):
         today = date(2026, 5, 2)
+        self.source.show_store_name = False
         clone = clone_invoice(self.db, self.source, self.user.locale, today)
         self.db.commit()
         self.assertNotEqual(clone.id, self.source.id)
@@ -80,6 +81,7 @@ class CloneTest(unittest.TestCase):
         self.assertIsNone(clone.due_date)
         self.assertEqual(clone.brief_note, "")
         self.assertEqual(clone.notes, "Warranty 18 months")
+        self.assertFalse(clone.show_store_name)
         self.assertEqual(clone.delivery, "not_sent")
         self.assertEqual(len(clone.lines), 1)
         copied = clone.lines[0]

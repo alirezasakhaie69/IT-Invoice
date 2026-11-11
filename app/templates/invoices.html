@@ -6,7 +6,28 @@
   <a class="btn btn-primary" href="/invoices/new">{{ t('new_invoice') }}</a>
 </div>
 {% if customer_name %}
-<p class="hint"><a href="/invoices">{{ t('all_invoices') }}</a></p>
+<p class="hint"><a href="/invoices">{{ t('all_invoices') }}</a> · <a href="/summary">{{ t('summary') }}</a></p>
+<div class="card">
+  <h2>{{ t('summary') }} — {{ customer_name }}</h2>
+  <p class="hint">{{ t('summary_hint') }}</p>
+  {% if buckets %}
+  <table class="data">
+    <thead><tr><th>{{ t('currency') }}</th><th>{{ t('issued') }}</th><th>{{ t('paid_amount') }}</th><th>{{ t('outstanding') }}</th></tr></thead>
+    <tbody>
+      {% for currency, bucket in buckets.items() %}
+      <tr>
+        <td>{{ t(currency) }}</td>
+        <td>{{ format_number(bucket.issued) }}</td>
+        <td>{{ format_number(bucket.paid) }}</td>
+        <td>{{ format_number(bucket.outstanding) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>{{ t('no_records') }}</p>
+  {% endif %}
+</div>
 {% endif %}
 <div class="card table-wrap">
   {% if rows %}

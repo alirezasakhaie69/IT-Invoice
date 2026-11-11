@@ -42,7 +42,7 @@
 <body>
   <div class="bar"></div>
   <div class="header">
-    <div class="brand">{{ seller.title }}</div>
+    <div class="brand">{% if seller.title %}{{ seller.title }}{% endif %}</div>
     <div style="text-align:center"><span class="pill">{{ title }}</span></div>
     <table class="meta">
       <tr><td class="muted">{{ t('number') }}:</td><td class="money">{{ number }}</td></tr>
@@ -56,7 +56,7 @@
       <div class="card">
         <h2>{{ t('spec_of', label=t('seller') if loop.first else t('buyer')) }}</h2>
         <div class="inner">
-          <div class="name">{{ party.title }}</div>
+          {% if party.title %}<div class="name">{{ party.title }}</div>{% endif %}
           {% for label, value in party.rows %}
           {% if value %}<p><em>{{ label }}:</em> {{ value }}</p>{% endif %}
           {% endfor %}

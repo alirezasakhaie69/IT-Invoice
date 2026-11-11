@@ -1,6 +1,8 @@
 import unittest
+from types import SimpleNamespace
 
 from app.format import format_input, format_number, parse_int
+from app.pdf import DEFAULT_ACCENT, normalize_accent, seller_heading
 
 
 class NumberFormatTest(unittest.TestCase):
@@ -13,6 +15,17 @@ class NumberFormatTest(unittest.TestCase):
         self.assertEqual(parse_int("1,000"), 1000)
         self.assertEqual(format_input("1000000", "fa"), "۱,۰۰۰,۰۰۰")
         self.assertEqual(format_input("۱,۰۰۰", "en"), "1,000")
+
+
+class StoreNameTest(unittest.TestCase):
+    def test_store_name_can_be_hidden(self):
+        issuer = SimpleNamespace(company="فروشگاه", contact_name="الهام", tax_id="", phone="", address="")
+        shown, _rows = seller_heading(SimpleNamespace(show_store_name=True), issuer, "fa")
+        hidden, _rows = seller_heading(SimpleNamespace(show_store_name=False), issuer, "fa")
+        self.assertEqual(shown, "فروشگاه")
+        self.assertEqual(hidden, "الهام")
+        self.assertEqual(normalize_accent(""), DEFAULT_ACCENT)
+        self.assertEqual(DEFAULT_ACCENT, "#ea580c")
 
 
 if __name__ == "__main__":

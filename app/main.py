@@ -49,7 +49,7 @@ from app.format import format_input, format_number, localize_digits, parse_int
 from app.i18n import translate
 from app.invoices import NumberTaken, book_rows, claim_number, clone_invoice, compute_line, convert_proforma, invoice_money, peek_number, present, replace_lines
 from app.models import Customer, Invoice, Issuer, Payment, SessionRow, User
-from app.pdf import FORMAL_COLORS, normalize_accent, pdf_filename
+from app.pdf import DEFAULT_ACCENT, FORMAL_COLORS, normalize_accent, pdf_filename
 from app.send import pdf_path, send_invoice, write_pdf
 
 log = logging.getLogger("invoice")
@@ -442,7 +442,17 @@ def invoice_list(request: Request, customer: int = 0):
         invoices = db.scalars(stmt).unique().all()
         person = db.get(Customer, customer) if customer else None
         rows = [present(invoice) for invoice in invoices]
-        return html(request, "invoices.html", rows=rows, customer_name=person.name if person else "", customer_id=customer)
+        buckets = {}
+        if person is not None:
+            _summary_rows, buckets = book_rows(db, date.min, date.max, person.id)
+        return html(
+            request,
+            "invoices.html",
+            rows=rows,
+            buckets=buckets,
+            customer_name=person.name if person else "",
+            customer_id=customer,
+        )
 
 
 def form_page(request, customers, invoice, values, lines, errors):
@@ -466,6 +476,7 @@ def form_page(request, customers, invoice, values, lines, errors):
         invalid=values["invalid"],
         number=values["number"],
         accent=normalize_accent(values["accent"]),
+        show_store_name=values["show_store_name"],
         formal_colors=FORMAL_COLORS,
     )
 
@@ -484,7 +495,8 @@ def empty_invoice_values(locale: str) -> dict:
         "money": invoice_money(SimpleNamespace(lines=[])),
         "invalid": False,
         "number": "",
-        "accent": "#2563eb",
+        "accent": DEFAULT_ACCENT,
+        "show_store_name": True,
     }
 
 
@@ -536,6 +548,7 @@ def edit_invoice(request: Request, invoice_id: int):
             "invalid": False,
             "number": invoice.number,
             "accent": normalize_accent(invoice.accent),
+            "show_store_name": invoice.show_store_name,
         }
         lines = lines_from_invoice(invoice, locale)
         return form_page(request, customers, invoice, values, lines, [])
@@ -581,6 +594,7 @@ def save_invoice(request: Request, invoice_id: int | None):
         if currency not in ("rial", "toman"):
             currency = "rial"
         accent = normalize_accent(form.get("accent"))
+        show_store_name = form.get("show_store_name") == "on"
         if customer_id and db.get(Customer, customer_id) is None:
             errors.append(translate(locale, "customer_required"))
         values = {
@@ -597,6 +611,7 @@ def save_invoice(request: Request, invoice_id: int | None):
             "invalid": invalid,
             "number": form.get("number"),
             "accent": accent,
+            "show_store_name": show_store_name,
         }
         if errors or issue is None:
             return form_page(request, customers, invoice, values, raw or [blank_line(locale)], errors)
@@ -616,6 +631,7 @@ def save_invoice(request: Request, invoice_id: int | None):
                 proforma_number=number if doc_type == "proforma" else None,
                 template=template_name,
                 accent=accent,
+                show_store_name=show_store_name,
                 language=language,
                 customer_id=customer_id,
                 currency=currency,
@@ -639,6 +655,7 @@ def save_invoice(request: Request, invoice_id: int | None):
                 invoice.proforma_number = number
             invoice.template = template_name
             invoice.accent = accent
+            invoice.show_store_name = show_store_name
             invoice.language = language
             invoice.customer_id = customer_id
             invoice.issue_date = issue
