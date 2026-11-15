@@ -59,6 +59,7 @@ a:hover { text-decoration: underline; }
 button, input, select, textarea { font-family: inherit; font-size: 0.875rem; }
 
 .wrap { max-width: 1100px; margin: 0 auto; padding: 1.25rem; }
+.wrap-wide { max-width: 1440px; }
 .topbar {
   display: flex;
   align-items: center;
@@ -80,13 +81,27 @@ button, input, select, textarea { font-family: inherit; font-size: 0.875rem; }
   padding: 1rem;
   margin-bottom: 1rem;
 }
-.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.75rem; }
-.tile { display: block; border-radius: 12px; padding: 1rem; border: 1px solid; color: inherit; text-decoration: none; }
-.tile:hover { text-decoration: none; }
-.tile strong { display: block; margin-bottom: 0.35rem; }
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; }
+.tile {
+  display: block;
+  border-radius: 12px;
+  padding: 0.85rem;
+  border: 1px solid;
+  color: inherit;
+  text-decoration: none;
+  backdrop-filter: blur(8px);
+}
+.tile:hover { text-decoration: none; filter: brightness(1.12); }
+.tile-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.4rem; }
+.tile strong { margin: 0; }
 .tile p { margin: 0.15rem 0; }
-.tile-ok { background: rgba(6, 78, 59, 0.28); border-color: #10b981; }
-.tile-due { background: rgba(154, 52, 18, 0.28); border-color: #f97316; }
+.tile-phone, .tile-note { color: var(--muted); font-size: 0.8rem; }
+.tile dl { margin: 0.65rem 0 0; display: grid; gap: 0.28rem; }
+.tile dl div { display: flex; justify-content: space-between; gap: 0.45rem; align-items: baseline; }
+.tile dt { color: var(--muted); font-size: 0.75rem; }
+.tile dd { margin: 0; text-align: end; }
+.tile-ok { background: rgba(16, 185, 129, 0.16); border-color: rgba(52, 211, 153, 0.8); }
+.tile-due { background: rgba(249, 115, 22, 0.16); border-color: rgba(251, 146, 60, 0.85); }
 .statement { overflow: visible; }
 .row-due { background: rgba(154, 52, 18, 0.18); }
 .page-head { display: flex; justify-content: space-between; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
@@ -248,6 +263,12 @@ table.data th { color: var(--muted); font-size: 0.75rem; font-weight: 600; }
 .day.selected { background: #2563eb; color: white; }
 code { color: #93c5fd; }
 
+@media (max-width: 1100px) {
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 800px) {
   .grid-2, .grid-3, .line-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .tiles { grid-template-columns: 1fr; }
 }

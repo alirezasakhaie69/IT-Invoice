@@ -34,7 +34,7 @@
     </nav>
   </header>
   {% endif %}
-  <main class="wrap">
+  <main class="wrap {% block wrap_class %}{% endblock %}">
     {% if message %}
     <div class="alert {{ 'alert-error' if message_error else 'alert-ok' }}">{{ t(message) }}</div>
     {% endif %}

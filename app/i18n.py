@@ -232,6 +232,7 @@ STRINGS = {
         "term_active": "اول دوره فعال را پایان دهید.",
         "term_locked": "دوره‌ای که پرداخت دارد قابل ویرایش نیست.",
         "nothing_due": "هنوز موعد پرداخت نرسیده است.",
+        "fee_status": "وضعیت این ماه",
     },
     "en": {
         "app_name": "Invoices",
@@ -466,6 +467,7 @@ STRINGS = {
         "term_active": "End the active term first.",
         "term_locked": "A term with payments cannot be edited.",
         "nothing_due": "No fee is due yet.",
+        "fee_status": "This month's fee",
     },
 }
 

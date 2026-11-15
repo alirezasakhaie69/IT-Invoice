@@ -917,7 +917,7 @@ def contract_cards(contracts, today: date, locale: str) -> list[dict]:
         current = active or terms[-1]
         months = term_months(current.start_date, current.duration)
         paid = {(payment.year, payment.month) for payment in current.payments}
-        _total, _paid_sum, balance = contract_balance(
+        total, paid_sum, balance = contract_balance(
             current.monthly_amount,
             current.duration,
             [payment.amount for payment in current.payments],
@@ -926,12 +926,18 @@ def contract_cards(contracts, today: date, locale: str) -> list[dict]:
         cards.append({
             "id": contract.id,
             "name": contract.customer.name,
+            "phone": contract.customer.phone,
             "tone": tile_tone(months, paid, today),
             "status": current.status,
+            "start": current.start_date,
+            "duration": current.duration,
             "monthly": current.monthly_amount,
             "currency": current.currency,
+            "total": total,
+            "paid": paid_sum,
             "balance": balance,
             "focus": format_period(focus[0], focus[1], locale) if focus else "",
+            "earlier": len(terms) - 1,
         })
     return cards
 

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block wrap_class %}wrap-wide{% endblock %}
 {% block body %}
 <div class="page-head">
   <h1>{{ t('contracts') }}</h1>
@@ -9,11 +10,26 @@
 <div class="tiles">
   {% for card in cards %}
   <a class="tile tile-{{ card.tone }}" href="/contracts/{{ card.id }}">
-    <strong>{{ card.name }}</strong>
-    <p><span class="badge {{ 'badge-paid' if card.status == 'active' else 'badge-neutral' }}">{{ t(card.status) }}</span></p>
-    <p>{{ t('monthly_amount') }}: {{ format_number(card.monthly) }} {{ t(card.currency) }}</p>
-    <p>{{ t('contract_balance') }}: {{ format_number(card.balance) }} {{ t(card.currency) }}</p>
-    <p>{% if card.focus %}{{ card.focus }} — {{ t('unpaid') if card.tone == 'due' else t('paid') }}{% else %}{{ t('nothing_due') }}{% endif %}</p>
+    <div class="tile-head">
+      <strong>{{ card.name }}</strong>
+      <span class="badge {{ 'badge-paid' if card.status == 'active' else 'badge-neutral' }}">{{ t(card.status) }}</span>
+    </div>
+    {% if card.phone %}<p class="tile-phone">{{ card.phone }}</p>{% endif %}
+    <dl>
+      <div><dt>{{ t('contract_start') }}</dt><dd>{{ format_date(card.start) }}</dd></div>
+      <div><dt>{{ t('duration_months') }}</dt><dd>{{ format_number(card.duration) }}</dd></div>
+      <div><dt>{{ t('monthly_amount') }}</dt><dd>{{ format_number(card.monthly) }} {{ t(card.currency) }}</dd></div>
+      <div><dt>{{ t('contract_total') }}</dt><dd>{{ format_number(card.total) }} {{ t(card.currency) }}</dd></div>
+      <div><dt>{{ t('contract_paid') }}</dt><dd>{{ format_number(card.paid) }} {{ t(card.currency) }}</dd></div>
+      <div><dt>{{ t('contract_balance') }}</dt><dd>{{ format_number(card.balance) }} {{ t(card.currency) }}</dd></div>
+      <div>
+        <dt>{{ t('fee_status') }}</dt>
+        <dd>{% if card.focus %}{{ card.focus }} — {{ t('unpaid') if card.tone == 'due' else t('paid') }}{% else %}{{ t('nothing_due') }}{% endif %}</dd>
+      </div>
+    </dl>
+    {% if card.earlier %}
+    <p class="tile-note">{{ t('past_terms') }}: {{ format_number(card.earlier) }}</p>
+    {% endif %}
   </a>
   {% endfor %}
 </div>
