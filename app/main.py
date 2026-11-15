@@ -42,6 +42,7 @@ from app.dates import (
     jalali_parts,
     month_cells,
     month_label,
+    query_flag,
     shift_month,
     to_jalali,
     weekday_labels,
@@ -405,11 +406,12 @@ def format_number_field(request: Request):
 
 
 @app.get("/calendar")
-def calendar(request: Request, year: int = 0, month: int = 0, selected: str = "", clear: int = 0):
+def calendar(request: Request, year: int = 0, month: int = 0, selected: str = "", clear: str = "0"):
     if not (1 <= month <= 12 and 1200 <= year <= 1600):
         year, month = jalali_parts("")
     previous = shift_month(year, month, -1)
     nxt = shift_month(year, month, 1)
+    show_clear = query_flag(clear)
     locale = request.state.user.locale
     cells = []
     for cell in month_cells(year, month):
@@ -433,7 +435,7 @@ def calendar(request: Request, year: int = 0, month: int = 0, selected: str = ""
         next_month=nxt[1],
         cells=cells,
         selected=selected,
-        clear=bool(clear),
+        clear=show_clear,
         label=month_label(year, month, locale),
         weekdays=weekday_labels(),
         today_iso=today.isoformat(),

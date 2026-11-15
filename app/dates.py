@@ -40,6 +40,11 @@ def format_iso(value: str | None, locale: str) -> str:
     return format_date(date.fromisoformat(value), locale)
 
 
+def query_flag(value: object) -> int:
+    """Turn a query flag into 0 or 1. Booleans render as True/False and must still be accepted."""
+    return 1 if str(value).strip().lower() in {"1", "true", "on"} else 0
+
+
 def jalali_parts(value: str | None, today: date | None = None) -> tuple[int, int]:
     if value:
         try:

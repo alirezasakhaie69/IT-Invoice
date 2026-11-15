@@ -1,7 +1,7 @@
 import unittest
 from datetime import date
 
-from app.dates import format_date, from_jalali, month_cells, to_jalali
+from app.dates import format_date, from_jalali, month_cells, query_flag, shift_month, to_jalali
 
 
 class CalendarConversionTest(unittest.TestCase):
@@ -18,6 +18,14 @@ class CalendarConversionTest(unittest.TestCase):
         for value in (date(2026, 11, 8), date(2020, 1, 1), date(2030, 12, 31)):
             year, month, day = to_jalali(value)
             self.assertEqual(from_jalali(year, month, day), value)
+
+    def test_month_links_keep_a_numeric_clear_flag(self):
+        self.assertEqual(query_flag(False), 0)
+        self.assertEqual(query_flag("False"), 0)
+        self.assertEqual(query_flag("True"), 1)
+        self.assertEqual(query_flag(1), 1)
+        self.assertEqual(shift_month(1405, 8, -1), (1405, 7))
+        self.assertEqual(shift_month(1405, 1, -1), (1404, 12))
 
 
 if __name__ == "__main__":
