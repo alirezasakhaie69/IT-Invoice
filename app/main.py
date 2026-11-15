@@ -32,10 +32,12 @@ from app.auth import (
 )
 from app.config import app_secret, cookie_secure, data_dir
 from app.crypto import redact
+from app.contracts import contract_balance, focus_period, statement_rows, term_months, tile_tone
 from app.dates import (
     default_period,
     format_date,
     format_iso,
+    format_period,
     format_timestamp,
     jalali_parts,
     month_cells,
@@ -61,7 +63,17 @@ from app.drive import (
 from app.format import format_input, format_number, localize_digits, parse_int
 from app.i18n import translate
 from app.invoices import NumberTaken, book_rows, claim_number, clone_invoice, compute_line, convert_proforma, invoice_money, peek_number, present, replace_lines
-from app.models import Customer, Invoice, Issuer, Payment, SessionRow, User
+from app.models import (
+    Contract,
+    ContractPayment,
+    ContractTerm,
+    Customer,
+    Invoice,
+    Issuer,
+    Payment,
+    SessionRow,
+    User,
+)
 from app.pdf import DEFAULT_ACCENT, FORMAL_COLORS, normalize_accent, pdf_filename
 from app.send import pdf_path, send_invoice, write_pdf
 
@@ -76,12 +88,12 @@ FLASH = {
     "saved", "deleted", "send_ok", "send_failed", "no_channel", "send_in_progress",
     "drive_ok", "drive_failed", "drive_started", "test_ok", "test_failed", "connected_msg", "converted",
     "customer_in_use", "cannot_delete_self", "cannot_delete_last_admin", "username_taken",
-    "date_invalid",
+    "date_invalid", "contract_exists", "term_invalid", "term_active", "term_locked",
 }
 ERRORS = {
     "send_failed", "no_channel", "send_in_progress", "drive_failed", "test_failed",
     "customer_in_use", "cannot_delete_self", "cannot_delete_last_admin", "username_taken",
-    "date_invalid",
+    "date_invalid", "contract_exists", "term_invalid", "term_active", "term_locked",
 }
 
 
@@ -848,6 +860,331 @@ def drive_route(request: Request, invoice_id: int):
         db.commit()
     threading.Thread(target=_save_drive, args=(invoice_id,), daemon=True).start()
     return redirect(f"/invoices/{invoice_id}?m=drive_started")
+
+
+def load_contract(db, contract_id: int) -> Contract | None:
+    return db.scalar(
+        select(Contract)
+        .where(Contract.id == contract_id)
+        .options(
+            selectinload(Contract.customer),
+            selectinload(Contract.terms).selectinload(ContractTerm.payments),
+        )
+    )
+
+
+def read_term(form: FormView):
+    try:
+        amount = parse_int(form.get("monthly_amount"))
+    except ValueError:
+        amount = 0
+    try:
+        duration = parse_int(form.get("duration"))
+    except ValueError:
+        duration = 0
+    currency = form.get("currency")
+    if currency not in ("rial", "toman"):
+        currency = "rial"
+    raw_start = form.get("start_date")
+    start = None
+    if raw_start:
+        try:
+            start = date.fromisoformat(raw_start)
+        except ValueError:
+            start = None
+    values = SimpleNamespace(
+        monthly_amount=form.get("monthly_amount"),
+        duration=form.get("duration") or "12",
+        currency=currency,
+        start_date=start.isoformat() if start else "",
+    )
+    if amount < 1 or duration < 1 or duration > 60:
+        return None, values, "term_invalid"
+    if start is None:
+        return None, values, "date_invalid"
+    return (amount, duration, start, currency), values, ""
+
+
+def contract_cards(contracts, today: date, locale: str) -> list[dict]:
+    cards = []
+    for contract in contracts:
+        terms = list(contract.terms)
+        if not terms:
+            continue
+        active = next((term for term in reversed(terms) if term.status == "active"), None)
+        current = active or terms[-1]
+        months = term_months(current.start_date, current.duration)
+        paid = {(payment.year, payment.month) for payment in current.payments}
+        _total, _paid_sum, balance = contract_balance(
+            current.monthly_amount,
+            current.duration,
+            [payment.amount for payment in current.payments],
+        )
+        focus = focus_period(months, today)
+        cards.append({
+            "id": contract.id,
+            "name": contract.customer.name,
+            "tone": tile_tone(months, paid, today),
+            "status": current.status,
+            "monthly": current.monthly_amount,
+            "currency": current.currency,
+            "balance": balance,
+            "focus": format_period(focus[0], focus[1], locale) if focus else "",
+        })
+    return cards
+
+
+def present_term(term: ContractTerm, today: date, locale: str) -> dict:
+    payments = {(payment.year, payment.month): payment for payment in term.payments}
+    total, paid, balance = contract_balance(
+        term.monthly_amount,
+        term.duration,
+        [payment.amount for payment in term.payments],
+    )
+    return {
+        "term": term,
+        "rows": statement_rows(term.start_date, term.duration, term.monthly_amount, payments, today, locale),
+        "total": total,
+        "paid": paid,
+        "balance": balance,
+        "edit": SimpleNamespace(
+            monthly_amount=format_number(term.monthly_amount, locale),
+            duration=str(term.duration),
+            currency=term.currency,
+            start_date=term.start_date.isoformat(),
+        ),
+    }
+
+
+def contract_page(request: Request, contract: Contract, errors: list[str] | None = None, draft=None):
+    locale = request.state.user.locale
+    today = date.today()
+    if draft is None:
+        draft = SimpleNamespace(monthly_amount="", duration="12", currency="rial", start_date=today.isoformat())
+    views = [present_term(term, today, locale) for term in reversed(list(contract.terms))]
+    return html(
+        request,
+        "contract_detail.html",
+        contract=contract,
+        views=views,
+        has_active=any(term.status == "active" for term in contract.terms),
+        errors=errors or [],
+        values=draft,
+        today=today.isoformat(),
+    )
+
+
+def blank_term_values():
+    return SimpleNamespace(monthly_amount="", duration="12", currency="rial", start_date=date.today().isoformat())
+
+
+@app.get("/contracts")
+def contract_list(request: Request):
+    with session() as db:
+        rows = db.scalars(
+            select(Contract)
+            .options(
+                selectinload(Contract.customer),
+                selectinload(Contract.terms).selectinload(ContractTerm.payments),
+            )
+            .order_by(Contract.id.desc())
+        ).unique().all()
+        return html(request, "contracts.html", cards=contract_cards(rows, date.today(), request.state.user.locale))
+
+
+@app.get("/contracts/new")
+def new_contract(request: Request):
+    with session() as db:
+        customers = db.scalars(select(Customer).order_by(Customer.name)).all()
+        return html(
+            request,
+            "contract_form.html",
+            customers=customers,
+            selected_customer=0,
+            values=blank_term_values(),
+            errors=[],
+        )
+
+
+@app.post("/contracts")
+def create_contract(request: Request):
+    form = read_form(request)
+    parsed, values, error = read_term(form)
+    try:
+        customer_id = int(form.get("customer_id") or "0")
+    except ValueError:
+        customer_id = 0
+    with session() as db:
+        locale = request.state.user.locale
+        customers = db.scalars(select(Customer).order_by(Customer.name)).all()
+        customer = db.get(Customer, customer_id)
+        if customer is None:
+            return html(
+                request,
+                "contract_form.html",
+                customers=customers,
+                selected_customer=0,
+                values=values,
+                errors=[translate(locale, "customer_required")],
+            )
+        existing = db.scalar(select(Contract).where(Contract.customer_id == customer.id))
+        if existing is not None:
+            return redirect(f"/contracts/{existing.id}?m=contract_exists")
+        if error or parsed is None:
+            return html(
+                request,
+                "contract_form.html",
+                customers=customers,
+                selected_customer=customer.id,
+                values=values,
+                errors=[translate(locale, error or "term_invalid")],
+            )
+        amount, duration, start, currency = parsed
+        now = utcnow()
+        contract = Contract(customer_id=customer.id, created_at=now, updated_at=now)
+        contract.terms.append(ContractTerm(
+            monthly_amount=amount,
+            duration=duration,
+            start_date=start,
+            currency=currency,
+            status="active",
+            created_at=now,
+        ))
+        db.add(contract)
+        db.commit()
+        db.refresh(contract)
+        return redirect(f"/contracts/{contract.id}?m=saved")
+
+
+@app.get("/contracts/{contract_id}")
+def contract_detail(request: Request, contract_id: int):
+    with session() as db:
+        contract = load_contract(db, contract_id)
+        if contract is None:
+            return html(request, "missing.html", status_code=404)
+        return contract_page(request, contract)
+
+
+@app.post("/contracts/{contract_id}/terms")
+def add_contract_term(request: Request, contract_id: int):
+    form = read_form(request)
+    parsed, values, error = read_term(form)
+    with session() as db:
+        contract = load_contract(db, contract_id)
+        if contract is None:
+            return html(request, "missing.html", status_code=404)
+        locale = request.state.user.locale
+        if any(term.status == "active" for term in contract.terms):
+            return redirect(f"/contracts/{contract_id}?m=term_active")
+        if error or parsed is None:
+            return contract_page(request, contract, [translate(locale, error or "term_invalid")], values)
+        amount, duration, start, currency = parsed
+        now = utcnow()
+        db.add(ContractTerm(
+            contract_id=contract.id,
+            monthly_amount=amount,
+            duration=duration,
+            start_date=start,
+            currency=currency,
+            status="active",
+            created_at=now,
+        ))
+        contract.updated_at = now
+        db.commit()
+        return redirect(f"/contracts/{contract_id}?m=saved")
+
+
+@app.post("/contracts/{contract_id}/terms/{term_id}")
+def edit_contract_term(request: Request, contract_id: int, term_id: int):
+    form = read_form(request)
+    parsed, _values, error = read_term(form)
+    with session() as db:
+        contract = load_contract(db, contract_id)
+        if contract is None:
+            return html(request, "missing.html", status_code=404)
+        term = next((item for item in contract.terms if item.id == term_id), None)
+        if term is None:
+            return html(request, "missing.html", status_code=404)
+        if term.payments:
+            return redirect(f"/contracts/{contract_id}?m=term_locked")
+        if error or parsed is None:
+            return redirect(f"/contracts/{contract_id}?m={error or 'term_invalid'}")
+        amount, duration, start, currency = parsed
+        term.monthly_amount = amount
+        term.duration = duration
+        term.start_date = start
+        term.currency = currency
+        contract.updated_at = utcnow()
+        db.commit()
+        return redirect(f"/contracts/{contract_id}?m=saved")
+
+
+@app.post("/contracts/{contract_id}/terms/{term_id}/status")
+def contract_term_status(request: Request, contract_id: int, term_id: int):
+    form = read_form(request)
+    status = form.get("status")
+    if status not in ("active", "completed"):
+        return redirect(f"/contracts/{contract_id}")
+    with session() as db:
+        contract = load_contract(db, contract_id)
+        if contract is None:
+            return html(request, "missing.html", status_code=404)
+        term = next((item for item in contract.terms if item.id == term_id), None)
+        if term is None:
+            return html(request, "missing.html", status_code=404)
+        if status == "active" and any(item.status == "active" and item.id != term.id for item in contract.terms):
+            return redirect(f"/contracts/{contract_id}?m=term_active")
+        term.status = status
+        contract.updated_at = utcnow()
+        db.commit()
+        return redirect(f"/contracts/{contract_id}?m=saved")
+
+
+@app.post("/contracts/{contract_id}/terms/{term_id}/payments")
+def contract_payments(request: Request, contract_id: int, term_id: int):
+    form = read_form(request)
+    with session() as db:
+        contract = load_contract(db, contract_id)
+        if contract is None:
+            return html(request, "missing.html", status_code=404)
+        term = next((item for item in contract.terms if item.id == term_id), None)
+        if term is None:
+            return html(request, "missing.html", status_code=404)
+        schedule = {f"{year}-{month:02d}": (year, month) for year, month in term_months(term.start_date, term.duration)}
+        wanted: dict[tuple[int, int], date] = {}
+        for key in form.getlist("paid"):
+            period = schedule.get(key)
+            if period is None:
+                continue
+            raw = form.get(f"paid_on_{key}")
+            if not raw:
+                paid_on = date.today()
+            else:
+                try:
+                    paid_on = date.fromisoformat(raw)
+                except ValueError:
+                    return redirect(f"/contracts/{contract_id}?m=date_invalid")
+            wanted[period] = paid_on
+        existing = {(payment.year, payment.month): payment for payment in list(term.payments)}
+        for period, payment in existing.items():
+            if period not in wanted:
+                db.delete(payment)
+        for period, paid_on in wanted.items():
+            payment = existing.get(period)
+            if payment is None:
+                db.add(ContractPayment(
+                    term_id=term.id,
+                    year=period[0],
+                    month=period[1],
+                    paid_on=paid_on,
+                    amount=term.monthly_amount,
+                ))
+            else:
+                payment.paid_on = paid_on
+                payment.amount = term.monthly_amount
+        contract.updated_at = utcnow()
+        db.commit()
+        return redirect(f"/contracts/{contract_id}?m=saved")
 
 
 @app.get("/customers")

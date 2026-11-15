@@ -150,6 +150,53 @@ class SendLog(Base):
     invoice: Mapped[Invoice] = relationship(back_populates="send_logs")
 
 
+class Contract(Base):
+    __tablename__ = "contracts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), nullable=False, unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    customer: Mapped[Customer] = relationship()
+    terms: Mapped[list["ContractTerm"]] = relationship(
+        back_populates="contract",
+        cascade="all, delete-orphan",
+        order_by="ContractTerm.id",
+    )
+
+
+class ContractTerm(Base):
+    __tablename__ = "contract_terms"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    contract_id: Mapped[int] = mapped_column(ForeignKey("contracts.id", ondelete="CASCADE"), nullable=False)
+    monthly_amount: Mapped[int] = mapped_column(Integer, nullable=False)
+    duration: Mapped[int] = mapped_column(Integer, nullable=False)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False, default="rial")
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    contract: Mapped[Contract] = relationship(back_populates="terms")
+    payments: Mapped[list["ContractPayment"]] = relationship(
+        back_populates="term",
+        cascade="all, delete-orphan",
+        order_by=lambda: (ContractPayment.year, ContractPayment.month),
+    )
+
+
+class ContractPayment(Base):
+    __tablename__ = "contract_payments"
+    __table_args__ = (UniqueConstraint("term_id", "year", "month", name="uq_contract_payment_month"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    term_id: Mapped[int] = mapped_column(ForeignKey("contract_terms.id", ondelete="CASCADE"), nullable=False)
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    month: Mapped[int] = mapped_column(Integer, nullable=False)
+    paid_on: Mapped[date] = mapped_column(Date, nullable=False)
+    amount: Mapped[int] = mapped_column(Integer, nullable=False)
+    term: Mapped[ContractTerm] = relationship(back_populates="payments")
+
+
 class DriveSetting(Base):
     __tablename__ = "drive_settings"
 

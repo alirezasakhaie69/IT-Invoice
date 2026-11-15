@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="page-head">
+  <h1>{{ t('new_contract') }}</h1>
+  <a class="btn btn-ghost" href="/contracts">{{ t('back') }}</a>
+</div>
+{% if errors %}
+<div class="alert alert-error">{% for error in errors %}<div>{{ error }}</div>{% endfor %}</div>
+{% endif %}
+{% if not customers %}
+<div class="card"><p>{{ t('customer_required') }} <a href="/customers/new">{{ t('new_customer') }}</a></p></div>
+{% else %}
+<form class="card grid-2" method="post" action="/contracts">
+  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+  <div class="field" style="grid-column: 1 / -1;">
+    <label>{{ t('customer') }}</label>
+    <div class="combo" data-customer-combo>
+      <input class="input combo-search" type="text" autocomplete="off" placeholder="{{ t('search_customer') }}" value="{% for customer in customers %}{% if customer.id == selected_customer %}{{ customer.name }}{% endif %}{% endfor %}">
+      <input type="hidden" name="customer_id" value="{{ selected_customer or '' }}">
+      <div class="combo-list" hidden>
+        {% for customer in customers %}
+        <button type="button" class="combo-item" data-id="{{ customer.id }}" data-name="{{ customer.name }}" data-phone="{{ customer.phone }}">{{ customer.name }}{% if customer.phone %} <span>{{ customer.phone }}</span>{% endif %}</button>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% include "partials/term_fields.html" %}
+  <p class="hint" style="grid-column: 1 / -1;">{{ t('help_contract') }}</p>
+  <button class="btn btn-primary" type="submit">{{ t('save') }}</button>
+</form>
+{% endif %}
+{% endblock %}

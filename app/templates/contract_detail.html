@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% from "partials/date_field.html" import date_field with context %}
+{% block body %}
+<div class="page-head">
+  <h1>{{ contract.customer.name }}</h1>
+  <a class="btn btn-ghost" href="/contracts">{{ t('back') }}</a>
+</div>
+{% if errors %}
+<div class="alert alert-error">{% for error in errors %}<div>{{ error }}</div>{% endfor %}</div>
+{% endif %}
+{% if not has_active %}
+<form class="card grid-2" method="post" action="/contracts/{{ contract.id }}/terms">
+  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+  <h2 style="grid-column: 1 / -1;">{{ t('new_term') }}</h2>
+  {% include "partials/term_fields.html" %}
+  <button class="btn btn-primary" type="submit">{{ t('save') }}</button>
+</form>
+{% endif %}
+{% for view in views %}
+<section class="card">
+  <div class="page-head">
+    <h2>{{ format_date(view.term.start_date) }}</h2>
+    <span class="badge {{ 'badge-paid' if view.term.status == 'active' else 'badge-neutral' }}">{{ t(view.term.status) }}</span>
+  </div>
+  <p>{{ t('duration_months') }}: {{ format_number(view.term.duration) }}</p>
+  <p>{{ t('monthly_amount') }}: {{ format_number(view.term.monthly_amount) }} {{ t(view.term.currency) }}</p>
+  <p>{{ t('contract_total') }}: {{ format_number(view.total) }} · {{ t('contract_paid') }}: {{ format_number(view.paid) }} · {{ t('contract_balance') }}: {{ format_number(view.balance) }} {{ t(view.term.currency) }}</p>
+  <form method="post" action="/contracts/{{ contract.id }}/terms/{{ view.term.id }}/status">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    {% if view.term.status == 'active' %}
+    <input type="hidden" name="status" value="completed">
+    <button class="btn btn-tint" type="submit">{{ t('end_term') }}</button>
+    {% else %}
+    <input type="hidden" name="status" value="active">
+    <button class="btn btn-tint" type="submit">{{ t('reopen_term') }}</button>
+    {% endif %}
+  </form>
+  {% if not view.term.payments %}
+  <form class="grid-2" method="post" action="/contracts/{{ contract.id }}/terms/{{ view.term.id }}" style="margin-top: 0.75rem;">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    {% with values=view.edit %}
+    {% include "partials/term_fields.html" %}
+    {% endwith %}
+    <button class="btn btn-primary" type="submit">{{ t('save') }}</button>
+  </form>
+  {% endif %}
+  <h2 style="margin-top: 1rem;">{{ t('statement') }}</h2>
+  <p class="hint">{{ t('help_contract') }}</p>
+  <form method="post" action="/contracts/{{ contract.id }}/terms/{{ view.term.id }}/payments">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <div class="statement">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>{{ t('mark_paid') }}</th>
+            <th>{{ t('contract_month') }}</th>
+            <th>{{ t('amount') }}</th>
+            <th>{{ t('paid_on') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in view.rows %}
+          <tr class="{{ 'row-due' if row.due else '' }}">
+            <td><input type="checkbox" name="paid" value="{{ row.key }}" {% if row.paid %}checked{% endif %}></td>
+            <td>{{ row.label }}</td>
+            <td>{{ format_number(row.amount) }}</td>
+            <td>{{ date_field('paid_on_' ~ row.key, row.paid_on or today) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <button class="btn btn-primary" type="submit" style="margin-top: 0.75rem;">{{ t('save_statement') }}</button>
+  </form>
+</section>
+{% endfor %}
+{% endblock %}

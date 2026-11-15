@@ -9,6 +9,10 @@ _MONTHS_FA = (
     "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
     "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند",
 )
+_MONTHS_EN = (
+    "Farvardin", "Ordibehesht", "Khordad", "Tir", "Mordad", "Shahrivar",
+    "Mehr", "Aban", "Azar", "Dey", "Bahman", "Esfand",
+)
 _WEEKDAYS_FA = ("ش", "ی", "د", "س", "چ", "پ", "ج")
 
 
@@ -76,7 +80,12 @@ def month_cells(year: int, month: int) -> list[date | None]:
 
 
 def month_label(year: int, month: int, locale: str) -> str:
-    return f"{_MONTHS_FA[month - 1]} {localize_digits(str(year), locale)}"
+    return format_period(year, month, locale)
+
+
+def format_period(year: int, month: int, locale: str) -> str:
+    names = _MONTHS_FA if locale == "fa" else _MONTHS_EN
+    return f"{names[month - 1]} {localize_digits(str(year), locale)}"
 
 
 def weekday_labels() -> tuple[str, ...]:

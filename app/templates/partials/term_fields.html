@@ -1,0 +1,20 @@
+{% from "partials/date_field.html" import date_field with context %}
+<div class="field">
+  <label>{{ t('monthly_amount') }}</label>
+  <input class="input grouped" name="monthly_amount" inputmode="numeric" value="{{ values.monthly_amount }}">
+</div>
+<div class="field">
+  <label>{{ t('duration_months') }}</label>
+  <input class="input" name="duration" inputmode="numeric" value="{{ values.duration }}">
+</div>
+<div class="field">
+  <label>{{ t('currency') }}</label>
+  <select class="input" name="currency">
+    <option value="rial" {% if values.currency == 'rial' %}selected{% endif %}>{{ t('rial') }}</option>
+    <option value="toman" {% if values.currency == 'toman' %}selected{% endif %}>{{ t('toman') }}</option>
+  </select>
+</div>
+<div class="field">
+  <label>{{ t('contract_start') }}</label>
+  {{ date_field('start_date', values.start_date) }}
+</div>

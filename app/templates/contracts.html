@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="page-head">
+  <h1>{{ t('contracts') }}</h1>
+  <a class="btn btn-primary" href="/contracts/new">{{ t('new_contract') }}</a>
+</div>
+<p class="hint">{{ t('help_contract') }}</p>
+{% if cards %}
+<div class="tiles">
+  {% for card in cards %}
+  <a class="tile tile-{{ card.tone }}" href="/contracts/{{ card.id }}">
+    <strong>{{ card.name }}</strong>
+    <p><span class="badge {{ 'badge-paid' if card.status == 'active' else 'badge-neutral' }}">{{ t(card.status) }}</span></p>
+    <p>{{ t('monthly_amount') }}: {{ format_number(card.monthly) }} {{ t(card.currency) }}</p>
+    <p>{{ t('contract_balance') }}: {{ format_number(card.balance) }} {{ t(card.currency) }}</p>
+    <p>{% if card.focus %}{{ card.focus }} — {{ t('unpaid') if card.tone == 'due' else t('paid') }}{% else %}{{ t('nothing_due') }}{% endif %}</p>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card"><p>{{ t('no_contracts') }}</p></div>
+{% endif %}
+{% endblock %}
