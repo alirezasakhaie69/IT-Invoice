@@ -92,7 +92,7 @@ Paste the client id and secret in Settings, save, then use Connect Google. Token
 
 ### Service account (folder)
 
-A service account has no Drive storage of its own, so it does not create the year folders. Share one of your personal My Drive folders with the service account, and the upload uses that folder id as the file’s parent. A Shared Drive is not used.
+Google does not give a service account storage in a personal My Drive. The upload still targets that folder id. When Google rejects the service account, the file is saved with the connected Google account that owns the folder. Use Connect Google once with that account. A Shared Drive is not required.
 
 1. Create a service account and a JSON key.
 2. In Google Drive, create a folder and share it with the service account email as Editor.
@@ -130,7 +130,7 @@ Deviations from the [Factor-Builder](https://github.com/Alirewa/Factor-Builder) 
 - A customer must start the bot before it can be messaged.
 - Telegram may need `TELEGRAM_PROXY_URL` on some networks. SOCKS proxies are not supported.
 - A retry can deliver another copy of the file.
-- A service account saves into the personal folder shared with it. That folder id is the file’s parent. The OAuth connection still creates `{year}` folders in the connected account’s own Drive.
+- A service account cannot store a file in a personal Drive. After Connect Google, that account saves the file into the folder id, including `{year}` folders inside it.
 - The OAuth client must be allowed to use the full Drive scope.
 - Sessions end 3 hours after login and are not extended by activity.
 - Quantity is a whole number and may be negative, which subtracts a return from the total. Money is not converted between rial and toman. Bot tokens can be saved in Settings; a blank field keeps the environment variable. Downloaded and Drive PDFs are named with the document number and the customer name. The formal PDF color is chosen on the invoice.

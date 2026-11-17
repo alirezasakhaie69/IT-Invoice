@@ -233,9 +233,14 @@ def _bearer(db, data: dict) -> str:
         data["sa_access_expires"] = int(now + remaining)
         save_drive(db, data)
         return data["sa_access_token"]
-    if not data["refresh_token"] or not data["oauth_client_id"] or not data["oauth_client_secret"]:
+    return _oauth_access_token(db, data)
+
+
+def _oauth_access_token(db, data: dict) -> str:
+    now = time.time()
+    if not data.get("refresh_token") or not data.get("oauth_client_id") or not data.get("oauth_client_secret"):
         raise RuntimeError("Connect a Google account first.")
-    if data["access_token"] and data["access_expires"] > now + 60:
+    if data.get("access_token") and data.get("access_expires", 0) > now + 60:
         return data["access_token"]
     token = _post_form(TOKEN_URL, {
         "client_id": data["oauth_client_id"],
@@ -351,23 +356,32 @@ def _create_folder(token: str, name: str, parent: str) -> str:
     return created["id"]
 
 
-def _destination(token: str, data: dict, invoice) -> str:
-    # A service account has no Drive storage. The PDF must be created inside the
-    # personal folder shared with it, with that folder id as the parent. A subfolder
-    # created by the service account is owned by the service account and cannot hold the file.
-    if data["mode"] == "service_account":
-        return root_folder_id(data)
+def _under_template(token: str, data: dict, invoice, root: str) -> str:
     template = (data.get("folder_template") or "Invoices/{year}").strip()
     if invoice.language == "fa":
         year, month, _day = to_jalali(invoice.issue_date)
     else:
         year, month = invoice.issue_date.year, invoice.issue_date.month
     rendered = template.replace("{year}", str(year)).replace("{month}", f"{month:02d}")
-    parent = "root"
+    parent = root
     for part in [piece for piece in rendered.split("/") if piece.strip()]:
         found = _find_folder(token, part.strip(), parent)
         parent = found or _create_folder(token, part.strip(), parent)
     return parent
+
+
+def _destination(token: str, data: dict, invoice) -> str:
+    # A service account has no Drive storage, so it cannot create the year folders.
+    # The file is placed directly in the personal folder. The connected Google account
+    # creates those folders if Google rejects the service account.
+    if data["mode"] == "service_account":
+        return root_folder_id(data)
+    return _under_template(token, data, invoice, "root")
+
+
+def _service_account_has_no_quota(exc: Exception) -> bool:
+    text = str(exc).lower()
+    return "storage quota" in text or "storagequotaexceeded" in text
 
 
 def test_connection(db) -> str:
@@ -389,11 +403,7 @@ def test_connection(db) -> str:
     return user.get("emailAddress") or "ok"
 
 
-def upload_pdf(db, invoice, payload: bytes, filename: str) -> str:
-    data = load_drive(db)
-    token = _bearer(db, data)
-    data = load_drive(db)
-    parent = _destination(token, data, invoice)
+def _upload_file(token: str, parent: str, filename: str, payload: bytes) -> str:
     boundary = "itinvoice" + secrets.token_hex(8)
     meta = json.dumps({"name": filename, "parents": [parent], "mimeType": "application/pdf"}).encode()
     body = b"".join([
@@ -412,6 +422,31 @@ def upload_pdf(db, invoice, payload: bytes, filename: str) -> str:
         f"multipart/related; boundary={boundary}",
     )
     return created.get("id", "")
+
+
+def upload_pdf(db, invoice, payload: bytes, filename: str) -> str:
+    from app.i18n import translate
+
+    data = load_drive(db)
+    if data.get("mode") == "service_account":
+        folder_id = root_folder_id(data)
+        service_token = _bearer(db, data)
+        data = load_drive(db)
+        try:
+            return _upload_file(service_token, folder_id, filename, payload)
+        except DriveCallError as exc:
+            if not _service_account_has_no_quota(exc):
+                raise
+            if not data.get("refresh_token"):
+                language = getattr(invoice, "language", None) or "fa"
+                raise RuntimeError(translate(language, "drive_sa_quota")) from None
+            user_token = _oauth_access_token(db, data)
+            data = load_drive(db)
+            parent = _under_template(user_token, data, invoice, folder_id)
+            return _upload_file(user_token, parent, filename, payload)
+    token = _bearer(db, data)
+    data = load_drive(db)
+    return _upload_file(token, _destination(token, data, invoice), filename, payload)
 
 
 def auto_save(db, invoice, payload: bytes, filename: str) -> None:

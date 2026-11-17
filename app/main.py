@@ -1489,8 +1489,6 @@ def settings_save(request: Request):
                 )
             return redirect("/settings?m=test_ok")
         if action == "connect":
-            if updated["mode"] != "oauth":
-                return html(request, "settings.html", issuer=issuer, drive=public_view(updated), error=translate(locale, "service_only"))
             try:
                 target = authorization_url(updated, request.state.user.id)
             except RuntimeError:

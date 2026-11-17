@@ -100,6 +100,55 @@ class DrivePendingTest(unittest.TestCase):
         self.assertEqual(parent, "folder-9")
         self.assertEqual(created, [])
 
+    def test_personal_folder_falls_back_to_the_google_account(self):
+        invoice = SimpleNamespace(language="en", issue_date=None)
+        saved = {
+            "mode": "service_account",
+            "folder_id": "folder-9",
+            "folder_template": "",
+            "refresh_token": "refresh",
+            "oauth_client_id": "client",
+            "oauth_client_secret": "secret",
+        }
+        calls = []
+
+        def fake_upload(token, parent, filename, payload):
+            calls.append((token, parent))
+            if token == "sa-token":
+                raise drive.DriveCallError("Service Accounts do not have storage quota.", 403)
+            return "file-1"
+
+        originals = (drive.load_drive, drive._bearer, drive._oauth_access_token, drive._upload_file, drive._under_template)
+        drive.load_drive = lambda db: dict(saved)
+        drive._bearer = lambda db, data: "sa-token"
+        drive._oauth_access_token = lambda db, data: calls.append("oauth") or "user-token"
+        drive._upload_file = fake_upload
+        drive._under_template = lambda token, data, invoice, root: root
+        try:
+            file_id = drive.upload_pdf(None, invoice, b"%PDF", "a.pdf")
+        finally:
+            drive.load_drive, drive._bearer, drive._oauth_access_token, drive._upload_file, drive._under_template = originals
+        self.assertEqual(file_id, "file-1")
+        self.assertEqual(calls, [("sa-token", "folder-9"), "oauth", ("user-token", "folder-9")])
+
+    def test_personal_folder_asks_for_google_connect_when_missing(self):
+        invoice = SimpleNamespace(language="en", issue_date=None)
+        saved = {"mode": "service_account", "folder_id": "folder-9", "refresh_token": ""}
+
+        def fake_upload(token, parent, filename, payload):
+            raise drive.DriveCallError("Service Accounts do not have storage quota.", 403)
+
+        originals = (drive.load_drive, drive._bearer, drive._upload_file)
+        drive.load_drive = lambda db: dict(saved)
+        drive._bearer = lambda db, data: "sa-token"
+        drive._upload_file = fake_upload
+        try:
+            with self.assertRaises(RuntimeError) as caught:
+                drive.upload_pdf(None, invoice, b"%PDF", "a.pdf")
+        finally:
+            drive.load_drive, drive._bearer, drive._upload_file = originals
+        self.assertIn("Connect Google", str(caught.exception))
+
     def test_service_account_credentials_come_from_a_file(self):
         import json
         import os
