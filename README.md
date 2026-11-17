@@ -17,7 +17,7 @@ cp .env.example .env
 docker compose up --build
 ```
 
-The base image is pulled from `docker.arvancloud.ir`, a mirror of `python:3.12-slim-bookworm`. Asking Docker Hub for that image times out. To use another registry, pass `--build-arg BASE_IMAGE=...`.
+The base image is pulled from `docker.arvancloud.ir`, a mirror of `python:3.12-slim-bookworm`. Asking Docker Hub for that image times out. To use another registry, pass `--build-arg BASE_IMAGE=...`. Python packages are installed from the first index that lists them: Aliyun, then Tsinghua, then pypi.org. The Runflare index currently returns an error page.
 
 4. Open http://localhost:9050 and sign in with `ADMIN_USERNAME` and `ADMIN_PASSWORD` from `.env`.
 
