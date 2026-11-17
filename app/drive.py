@@ -236,18 +236,38 @@ def _bearer(db, data: dict) -> str:
     return _oauth_access_token(db, data)
 
 
-def _oauth_access_token(db, data: dict) -> str:
+def _google_connection_revoked(exc: Exception) -> bool:
+    text = str(exc).lower()
+    return "expired or revoked" in text or "invalid_grant" in text
+
+
+def _forget_google_connection(db, data: dict) -> None:
+    data["refresh_token"] = ""
+    data["access_token"] = ""
+    data["access_expires"] = 0
+    save_drive(db, data)
+
+
+def _oauth_access_token(db, data: dict, language: str = "en") -> str:
+    from app.i18n import translate
+
     now = time.time()
     if not data.get("refresh_token") or not data.get("oauth_client_id") or not data.get("oauth_client_secret"):
         raise RuntimeError("Connect a Google account first.")
     if data.get("access_token") and data.get("access_expires", 0) > now + 60:
         return data["access_token"]
-    token = _post_form(TOKEN_URL, {
-        "client_id": data["oauth_client_id"],
-        "client_secret": data["oauth_client_secret"],
-        "refresh_token": data["refresh_token"],
-        "grant_type": "refresh_token",
-    })
+    try:
+        token = _post_form(TOKEN_URL, {
+            "client_id": data["oauth_client_id"],
+            "client_secret": data["oauth_client_secret"],
+            "refresh_token": data["refresh_token"],
+            "grant_type": "refresh_token",
+        })
+    except RuntimeError as exc:
+        if not _google_connection_revoked(exc):
+            raise
+        _forget_google_connection(db, data)
+        raise RuntimeError(translate(language, "drive_reconnect")) from None
     data["access_token"] = token["access_token"]
     data["access_expires"] = int(now + int(token.get("expires_in", 3600)))
     save_drive(db, data)
@@ -440,7 +460,8 @@ def upload_pdf(db, invoice, payload: bytes, filename: str) -> str:
             if not data.get("refresh_token"):
                 language = getattr(invoice, "language", None) or "fa"
                 raise RuntimeError(translate(language, "drive_sa_quota")) from None
-            user_token = _oauth_access_token(db, data)
+            language = getattr(invoice, "language", None) or "fa"
+            user_token = _oauth_access_token(db, data, language)
             data = load_drive(db)
             parent = _under_template(user_token, data, invoice, folder_id)
             return _upload_file(user_token, parent, filename, payload)

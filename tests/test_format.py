@@ -121,7 +121,7 @@ class DrivePendingTest(unittest.TestCase):
         originals = (drive.load_drive, drive._bearer, drive._oauth_access_token, drive._upload_file, drive._under_template)
         drive.load_drive = lambda db: dict(saved)
         drive._bearer = lambda db, data: "sa-token"
-        drive._oauth_access_token = lambda db, data: calls.append("oauth") or "user-token"
+        drive._oauth_access_token = lambda db, data, language="en": calls.append("oauth") or "user-token"
         drive._upload_file = fake_upload
         drive._under_template = lambda token, data, invoice, root: root
         try:
@@ -148,6 +148,27 @@ class DrivePendingTest(unittest.TestCase):
         finally:
             drive.load_drive, drive._bearer, drive._upload_file = originals
         self.assertIn("Connect Google", str(caught.exception))
+
+    def test_revoked_google_connection_is_cleared(self):
+        saved = {
+            "refresh_token": "old-token",
+            "oauth_client_id": "client",
+            "oauth_client_secret": "secret",
+            "access_token": "access",
+            "access_expires": 0,
+        }
+        stored = {}
+        originals = (drive._post_form, drive.save_drive)
+        drive._post_form = lambda url, fields: (_ for _ in ()).throw(RuntimeError("Token has been expired or revoked."))
+        drive.save_drive = lambda db, data: stored.update(data)
+        try:
+            with self.assertRaises(RuntimeError) as caught:
+                drive._oauth_access_token(None, dict(saved), "en")
+        finally:
+            drive._post_form, drive.save_drive = originals
+        self.assertIn("Connect Google", str(caught.exception))
+        self.assertEqual(stored.get("refresh_token"), "")
+        self.assertEqual(stored.get("access_token"), "")
 
     def test_service_account_credentials_come_from_a_file(self):
         import json
