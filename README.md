@@ -17,6 +17,8 @@ cp .env.example .env
 docker compose up --build
 ```
 
+The base image is pulled from `docker.arvancloud.ir`, a mirror of `python:3.12-slim-bookworm`. Asking Docker Hub for that image times out. To use another registry, pass `--build-arg BASE_IMAGE=...`.
+
 4. Open http://localhost:9050 and sign in with `ADMIN_USERNAME` and `ADMIN_PASSWORD` from `.env`.
 
 The first boot creates that admin when the user table is empty. The container clock uses `Asia/Tehran`, which is what “today” means for new invoices and clones. Sessions are checked in UTC and last 3 hours from login. Later requests do not extend them.

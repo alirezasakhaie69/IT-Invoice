@@ -1,4 +1,6 @@
-FROM python:3.12-slim-bookworm
+# Docker Hub does not answer in time from this network. This is the same python:3.12-slim-bookworm image.
+ARG BASE_IMAGE=docker.arvancloud.ir/python:3.12-slim-bookworm
+FROM ${BASE_IMAGE}
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
