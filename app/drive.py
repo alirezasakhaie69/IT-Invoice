@@ -260,6 +260,23 @@ def exchange_code(db, data: dict, code: str) -> None:
     save_drive(db, data)
 
 
+class DriveCallError(RuntimeError):
+    def __init__(self, message: str, status: int):
+        super().__init__(message)
+        self.status = status
+
+
+def explain_drive_error(message: str) -> str:
+    text = message or ""
+    lowered = text.lower()
+    if "storagequotaexceeded" in lowered or "storage quota" in lowered:
+        return (
+            "This service account cannot store files in a personal Drive folder. "
+            "In Settings, choose OAuth and connect the Google account that owns the folder."
+        )
+    return text
+
+
 def _api(method: str, url: str, token: str, body: bytes | None = None, content_type: str | None = None):
     from app.send import exchange
 
@@ -277,8 +294,19 @@ def _api(method: str, url: str, token: str, body: bytes | None = None, content_t
             message = error.get("message") or str(error)
         else:
             message = str(error or f"HTTP {status}")
-        raise RuntimeError(redact(message))
+        raise DriveCallError(explain_drive_error(redact(message)), status)
     return parsed
+
+
+def _api_my_drive(method: str, url: str, token: str, body: bytes | None = None, content_type: str | None = None):
+    """Call Drive for a personal folder. Retry with shared-drive support only when the parent is hidden."""
+    try:
+        return _api(method, url, token, body, content_type)
+    except DriveCallError as exc:
+        if exc.status != 404:
+            raise
+        join = "&" if "?" in url else "?"
+        return _api(method, f"{url}{join}supportsAllDrives=true", token, body, content_type)
 
 
 def _quote_query(name: str) -> str:
@@ -286,24 +314,21 @@ def _quote_query(name: str) -> str:
 
 
 def _find_folder(token: str, name: str, parent: str) -> str | None:
+    # A parent query is enough. corpora=allDrives walks every shared drive and the read times out.
     query = (
         f"name = '{_quote_query(name)}' and mimeType = 'application/vnd.google-apps.folder' "
         f"and '{parent}' in parents and trashed = false"
     )
-    for corpora in ("user", "allDrives"):
-        params = {
-            "q": query,
-            "fields": "files(id,name)",
-            "pageSize": "5",
-            "supportsAllDrives": "true",
-            "includeItemsFromAllDrives": "true",
-            "corpora": corpora,
-        }
-        found = _api("GET", f"{DRIVE}/files?{urllib.parse.urlencode(params)}", token)
-        files = found.get("files") or []
-        if files:
-            return files[0]["id"]
-    return None
+    params = {
+        "q": query,
+        "fields": "files(id,name)",
+        "pageSize": "5",
+        "supportsAllDrives": "true",
+        "includeItemsFromAllDrives": "true",
+    }
+    found = _api("GET", f"{DRIVE}/files?{urllib.parse.urlencode(params)}", token)
+    files = found.get("files") or []
+    return files[0]["id"] if files else None
 
 
 def _create_folder(token: str, name: str, parent: str) -> str:
@@ -312,13 +337,7 @@ def _create_folder(token: str, name: str, parent: str) -> str:
         "mimeType": "application/vnd.google-apps.folder",
         "parents": [parent],
     }).encode()
-    created = _api(
-        "POST",
-        f"{DRIVE}/files?supportsAllDrives=true",
-        token,
-        body,
-        "application/json",
-    )
+    created = _api_my_drive("POST", f"{DRIVE}/files", token, body, "application/json")
     return created["id"]
 
 
@@ -370,9 +389,9 @@ def upload_pdf(db, invoice, payload: bytes, filename: str) -> str:
         payload,
         f"\r\n--{boundary}--\r\n".encode(),
     ])
-    created = _api(
+    created = _api_my_drive(
         "POST",
-        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true",
+        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
         token,
         body,
         f"multipart/related; boundary={boundary}",

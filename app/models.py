@@ -70,7 +70,7 @@ class Sequence(Base):
 
 class Invoice(Base):
     __tablename__ = "invoices"
-    __table_args__ = (UniqueConstraint("doc_type", "number", name="uq_invoice_number"),)
+    __table_args__ = (UniqueConstraint("number", name="uq_invoice_number"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     doc_type: Mapped[str] = mapped_column(String(16), nullable=False)

@@ -100,13 +100,13 @@ A service account has no Google Drive storage of its own. Share one of your fold
 
 Google still owns each uploaded file by the account that creates it. If a personal My Drive folder is rejected with `storageQuotaExceeded`, use the OAuth connection above. That connection saves into your own Drive. ([folder guide](https://developers.google.com/workspace/drive/api/guides/folder))
 
-Uploads send `supportsAllDrives=true`. Files are created with `POST https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart` ([files.create](https://developers.google.com/workspace/drive/api/reference/rest/v3/files/create)). Each save adds a new file. It does not replace the previous one.
+Files are created with `POST https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart` ([files.create](https://developers.google.com/workspace/drive/api/reference/rest/v3/files/create)). A personal folder is used as-is. `supportsAllDrives=true` is added only when that folder is in a shared drive. Each save adds a new file. It does not replace the previous one. Year folders are found with a query limited to the parent folder. A search across every shared drive is not used, because that call stalls.
 
 ## How invoices work
 
 - Amounts are integers in the invoice’s own unit, rial or toman. They are never converted. One toman is 10 rial only as a definition. Totals on the summary are grouped by unit.
 - Quantity is a positive whole number. Discount is an amount in the same unit. Tax is a percent from 0 to 100. Line tax rounds half up.
-- Invoices and pro formas have separate yearly numbers such as `1405-001`, taken from the Solar Hijri year of the issue date. The number can be edited. Converting a pro forma gives it the next invoice number, keeps the pro forma number on the page, sets delivery back to not sent, and keeps recorded payments so they count as receivables. A sent invoice can be sent again.
+- Invoices and pro formas share one yearly sequence such as `1405-001`, taken from the Solar Hijri year of the issue date. Invoice 009 is followed by pro forma 010, then invoice 011. The number can be edited. Converting a pro forma gives it the next number in that same sequence, keeps the pro forma number on the page, sets delivery back to not sent, and keeps recorded payments so they count as receivables. A sent invoice can be sent again.
 - Clone copies the customer, lines, currency, document type, and template. The language follows your current UI language. The issue date is today. Due date and the brief note are cleared. Delivery is not sent and there are no payments. The new document opens in the editor.
 - The brief note is shown in the list and on the detail page. It is not in the PDF. The invoice description is printed at the bottom of the PDF.
 - Payment status is derived: unpaid, partially paid, or paid (including a zero total, or an overpayment). Outstanding is the total minus payments and can be negative.
@@ -132,7 +132,7 @@ Deviations from the [Factor-Builder](https://github.com/Alirewa/Factor-Builder) 
 - A customer must start the bot before it can be messaged.
 - Telegram may need `TELEGRAM_PROXY_URL` on some networks. SOCKS proxies are not supported.
 - A retry can deliver another copy of the file.
-- Service accounts work only with a Shared Drive.
+- A service account can save into a folder shared with it. If Google rejects the upload because the service account has no storage quota, connect with OAuth instead.
 - The OAuth client must be allowed to use the full Drive scope.
 - Sessions end 3 hours after login and are not extended by activity.
 - Quantity is a whole number and may be negative, which subtracts a return from the total. Money is not converted between rial and toman. Bot tokens can be saved in Settings; a blank field keeps the environment variable. Downloaded and Drive PDFs are named with the document number and the customer name. The formal PDF color is chosen on the invoice.

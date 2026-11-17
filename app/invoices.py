@@ -70,8 +70,9 @@ def present(invoice: Invoice) -> dict:
     }
 
 
-def sequence_key(doc_type: str, year: int) -> str:
-    return f"{doc_type}-{year}"
+def sequence_key(_doc_type: str, year: int) -> str:
+    """Invoices and pro formas share one counter per Solar Hijri year."""
+    return f"doc-{year}"
 
 
 def peek_number(db, doc_type: str, issue: date) -> str:
@@ -96,7 +97,7 @@ def claim_number(db, doc_type: str, issue: date, raw: str = "", exclude_id: int 
     chosen = normalize_doc_number(raw) if (raw or "").strip() else peek_number(db, doc_type, issue)
     year_text, serial_text = chosen.split("-")
     year, serial = int(year_text), int(serial_text)
-    stmt = select(Invoice.id).where(Invoice.doc_type == doc_type, Invoice.number == chosen)
+    stmt = select(Invoice.id).where(Invoice.number == chosen)
     if exclude_id is not None:
         stmt = stmt.where(Invoice.id != exclude_id)
     if db.scalar(stmt):

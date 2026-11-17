@@ -11,7 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import sessionmaker
 
 from app.db import Base, make_engine
-from app.invoices import clone_invoice, convert_proforma, payment_status, present
+from app.invoices import NumberTaken, claim_number, clone_invoice, convert_proforma, payment_status, peek_number, present
 from app.models import Customer, Invoice, InvoiceLine, Payment, Sequence, User
 
 
@@ -28,8 +28,7 @@ class CloneTest(unittest.TestCase):
         self.db.add_all([
             self.user,
             self.customer,
-            Sequence(name="invoice-1398", last_value=0),
-            Sequence(name="proforma-1398", last_value=4),
+            Sequence(name="doc-1398", last_value=4),
         ])
         self.db.flush()
         self.source = Invoice(
@@ -105,10 +104,40 @@ class CloneTest(unittest.TestCase):
         self.db.commit()
         self.assertEqual(self.source.doc_type, "invoice")
         self.assertEqual(self.source.proforma_number, "1398-004")
-        self.assertEqual(self.source.number, "1398-001")
+        self.assertEqual(self.source.number, "1398-005")
         self.assertEqual(self.source.delivery, "not_sent")
         self.assertEqual(len(self.source.payments), 1)
         self.assertEqual(payment_status(present(self.source)["money"]["total"], present(self.source)["paid"]), "partial")
+
+    def test_invoice_and_proforma_share_one_sequence(self):
+        issue = date(2026, 5, 2)
+        self.db.add(Sequence(name="doc-1405", last_value=8))
+        self.db.commit()
+        self.assertEqual(peek_number(self.db, "proforma", issue), "1405-009")
+        issued = []
+        for doc_type in ("invoice", "proforma", "invoice"):
+            number = claim_number(self.db, doc_type, issue, "")
+            self.db.add(Invoice(
+                doc_type=doc_type,
+                number=number,
+                proforma_number=number if doc_type == "proforma" else None,
+                template="store",
+                language="fa",
+                customer_id=self.customer.id,
+                currency="rial",
+                issue_date=issue,
+                delivery="not_sent",
+                sending=False,
+                drive_file_id="",
+                drive_error="",
+                created_at=datetime(2026, 5, 2, 8, 0, 0),
+                updated_at=datetime(2026, 5, 2, 8, 0, 0),
+            ))
+            self.db.flush()
+            issued.append(number)
+        self.assertEqual(tuple(issued), ("1405-009", "1405-010", "1405-011"))
+        with self.assertRaises(NumberTaken):
+            claim_number(self.db, "proforma", issue, "1405-010")
 
 
 if __name__ == "__main__":
