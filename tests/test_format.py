@@ -2,6 +2,8 @@ import unittest
 from types import SimpleNamespace
 
 from app.format import format_input, format_number, parse_int
+from app.main import FormView, parse_lines
+from app.pdf import _ENV
 import app.drive as drive
 from app.drive import drive_is_pending, explain_drive_error, mark_drive_pending, root_folder_id
 from app.pdf import DEFAULT_ACCENT, normalize_accent, seller_heading
@@ -86,6 +88,67 @@ class DrivePendingTest(unittest.TestCase):
         text = explain_drive_error("Service Accounts do not have storage quota.")
         self.assertIn("OAuth", text)
         self.assertNotIn("storage quota", text.lower())
+
+
+def _pdf_context():
+    return {
+        "font_css": "",
+        "accent": "#ea580c",
+        "accent_soft": "#fff7ed",
+        "accent_line": "#fdba74",
+        "locale": "en",
+        "dir": "ltr",
+        "seller": {"title": "Shop", "rows": []},
+        "buyer": {"title": "Buyer", "rows": []},
+        "title": "Invoice",
+        "t": lambda key, **_kw: key,
+        "number": "1",
+        "issue_date": "2026",
+        "due_date": "",
+        "lines": [{
+            "position": "1",
+            "description": "Cable\nInstallation",
+            "quantity": "1",
+            "unit": "pc",
+            "unit_price": "1",
+            "discount": "0",
+            "tax_percent": "0",
+            "total": "1",
+        }],
+        "blank_labels": [],
+        "notes": "",
+        "currency": "rial",
+        "show_discount": False,
+        "show_tax": False,
+        "subtotal": "1",
+        "discount": "0",
+        "tax": "0",
+        "total": "1",
+        "words": "one",
+    }
+
+
+class LineDescriptionTest(unittest.TestCase):
+    def test_description_keeps_line_breaks(self):
+        form = FormView({
+            "description": ["  Cable\r\nInstallation\r\n  "],
+            "quantity": ["2"],
+            "unit": ["pc"],
+            "unit_price": ["1000"],
+            "discount": ["0"],
+            "tax_percent": ["0"],
+        })
+        _raw, parsed, invalid = parse_lines(form, "en")
+        self.assertFalse(invalid)
+        self.assertEqual(parsed[0]["description"], "Cable\nInstallation")
+
+    def test_pdf_templates_keep_description_breaks(self):
+        context = _pdf_context()
+        for name in ("pdf/formal.html", "pdf/store.html"):
+            html = _ENV.get_template(name).render(**context)
+            self.assertIn("white-space: pre-line", html)
+            self.assertIn("Cable\nInstallation", html)
+            self.assertIn('class="desc"', html)
 
 
 if __name__ == "__main__":

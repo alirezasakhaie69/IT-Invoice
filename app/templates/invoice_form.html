@@ -117,7 +117,7 @@
       {% include "partials/line_row.html" %}
       {% endfor %}
     </div>
-    <p class="hint">{{ t('help_return') }}</p>
+    <p class="hint">{{ t('help_description') }} {{ t('help_return') }}</p>
     <button class="btn btn-tint" type="button" hx-get="/invoices/line-row" hx-target="#lines" hx-swap="beforeend">{{ t('add_line') }}</button>
     <div id="totals"
       hx-post="/invoices/preview"

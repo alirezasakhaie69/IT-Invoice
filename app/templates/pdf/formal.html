@@ -23,7 +23,8 @@
     .card em { color: #94a3b8; font-style: normal; }
     table.items { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
     table.items th { background: {{ accent }}; color: #ffffff; font-size: 10.5px; font-weight: 700; padding: 7px 8px; text-align: center; }
-    table.items td { padding: 7px 8px; border-bottom: 1px solid #eef2f7; font-size: 11px; }
+    table.items td { padding: 7px 8px; border-bottom: 1px solid #eef2f7; font-size: 11px; vertical-align: middle; }
+    table.items td.desc { white-space: pre-line; vertical-align: top; line-height: 1.7; text-align: start; }
     table.items tr.alt td { background: #f8fafc; }
     .money { direction: ltr; text-align: left; font-weight: 700; }
     .summary-wrap { display: flex; gap: 16px; align-items: flex-start; }
@@ -81,7 +82,7 @@
         {% for line in lines %}
         <tr class="{{ 'alt' if loop.index is even else '' }}">
           <td style="text-align:center;color:#94a3b8">{{ line.position }}</td>
-          <td>{{ line.description }}</td>
+          <td class="desc">{{ line.description }}</td>
           <td style="text-align:center">{{ line.quantity }}</td>
           <td style="text-align:center;color:#475569">{{ line.unit }}</td>
           <td class="money">{{ line.unit_price }}</td>

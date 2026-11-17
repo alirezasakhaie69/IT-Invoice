@@ -1,5 +1,5 @@
 <div class="line-row">
-  <div><label>{{ t('description') }}</label><input class="input" name="description" value="{{ line.description }}"></div>
+  <div><label>{{ t('description') }}</label><textarea class="input line-text" name="description" rows="3" maxlength="2000">{{ line.description }}</textarea></div>
   <div><label>{{ t('quantity') }}</label><input class="input grouped" name="quantity" inputmode="numeric" value="{{ line.quantity }}"></div>
   <div><label>{{ t('unit') }}</label><input class="input" name="unit" value="{{ line.unit }}"></div>
   <div><label>{{ t('unit_price') }}</label><input class="input grouped" name="unit_price" inputmode="numeric" value="{{ line.unit_price }}"></div>

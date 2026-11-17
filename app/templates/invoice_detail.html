@@ -47,7 +47,7 @@
       {% for item in view.line_views %}
       <tr>
         <td>{{ format_number(item.line.position) }}</td>
-        <td>{{ item.line.description }}</td>
+        <td class="desc-text">{{ item.line.description }}</td>
         <td>{{ format_number(item.line.quantity) }}</td>
         <td>{{ item.line.unit }}</td>
         <td>{{ format_number(item.line.unit_price) }}</td>

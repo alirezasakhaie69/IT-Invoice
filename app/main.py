@@ -214,11 +214,12 @@ def parse_lines(form: FormView, locale: str):
         except ValueError:
             invalid = True
             continue
-        if not item["description"].strip():
+        description = item["description"].replace("\r\n", "\n").replace("\r", "\n").strip()
+        if not description:
             invalid = True
             continue
         parsed.append({
-            "description": item["description"].strip()[:400],
+            "description": description[:2000],
             "quantity": quantity,
             "unit": (item["unit"].strip() or default_unit)[:40],
             "unit_price": price,

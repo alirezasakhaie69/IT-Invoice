@@ -22,7 +22,8 @@
     .party-body { display: flex; flex-wrap: wrap; gap: 2px 16px; padding: 6px 8px; font-size: 10.5px; }
     .party-body em { color: #777777; font-style: normal; }
     .items { margin-top: 8px; border: 1.5px solid #333333; }
-    .items th, .items td { border: 1px solid #9a9a9a; padding: 6px 8px; height: 26px; font-size: 11px; }
+    .items th, .items td { border: 1px solid #9a9a9a; padding: 6px 8px; min-height: 26px; font-size: 11px; vertical-align: middle; }
+    .items td.desc { white-space: pre-line; vertical-align: top; line-height: 1.7; }
     .items th { background: #e8e8e8; border-color: #333333; font-weight: 700; text-align: center; font-size: 10.5px; }
     .money { direction: ltr; text-align: left; }
     .strong { font-weight: 700; }
@@ -75,7 +76,7 @@
       {% for line in lines %}
       <tr>
         <td style="text-align:center">{{ line.position }}</td>
-        <td>{{ line.description }}</td>
+        <td class="desc">{{ line.description }}</td>
         <td style="text-align:center">{{ line.quantity }}</td>
         <td style="text-align:center">{{ line.unit }}</td>
         <td class="money">{{ line.unit_price }}</td>

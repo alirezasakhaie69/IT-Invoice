@@ -13,7 +13,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.db import Base, make_engine
 from app.models import Customer, Invoice, InvoiceLine, SendLog
-from app.send import send_invoice
+from app.send import _limit_segment_size, send_invoice
 
 
 class SendLogTest(unittest.TestCase):
@@ -91,3 +91,22 @@ class SendLogTest(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0].result, "ok")
         self.assertEqual(rows[0].error, "")
+
+
+class TunnelSegmentTest(unittest.TestCase):
+    def test_google_packets_stay_small_enough_for_wireguard(self):
+        seen = {}
+
+        class Sock:
+            def setsockopt(self, level, opt, value):
+                seen["value"] = value
+
+        _limit_segment_size(Sock())
+        self.assertEqual(seen["value"], 1100)
+
+    def test_unsupported_mss_option_is_ignored(self):
+        class Sock:
+            def setsockopt(self, level, opt, value):
+                raise OSError(10042, "unsupported")
+
+        _limit_segment_size(Sock())

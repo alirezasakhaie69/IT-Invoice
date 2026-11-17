@@ -19,6 +19,19 @@ from app.pdf import pdf_filename, render_invoice_pdf
 
 log = logging.getLogger("invoice")
 
+# WireGuard that carries only Google addresses often cannot return the ICMP message
+# that would shrink a packet. A full-size segment is dropped, a short request still
+# succeeds, and the PDF upload waits until the read times out. 1100 bytes fits a
+# tunnel MTU of 1280 after the TCP and IP headers.
+_TUNNEL_MSS = 1100
+
+
+def _limit_segment_size(sock: socket.socket) -> None:
+    try:
+        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_MAXSEG, _TUNNEL_MSS)
+    except OSError:
+        return
+
 
 def connect_prefer_ipv4(host: str, port: int, timeout):
     """Try IPv4 before IPv6. A dead IPv6 route can stall each Google call for minutes."""
@@ -34,6 +47,7 @@ def connect_prefer_ipv4(host: str, port: int, timeout):
         for fam, socktype, proto, _canon, sockaddr in infos:
             sock = socket.socket(fam, socktype, proto)
             sock.settimeout(connect_timeout)
+            _limit_segment_size(sock)
             try:
                 sock.connect(sockaddr)
                 sock.settimeout(read_timeout)
