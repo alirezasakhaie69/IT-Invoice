@@ -32,6 +32,7 @@ DEFAULTS = {
     "access_token": "",
     "access_expires": 0,
     "service_account_json": "",
+    "folder_id": "",
     "shared_drive_id": "",
     "sa_access_token": "",
     "sa_access_expires": 0,
@@ -60,6 +61,11 @@ def save_drive(db, data: dict) -> None:
     db.commit()
 
 
+def root_folder_id(data: dict) -> str:
+    """Service-account uploads start in this folder. Older settings stored a Shared Drive id."""
+    return (data.get("folder_id") or data.get("shared_drive_id") or "").strip()
+
+
 def public_view(data: dict) -> dict:
     return {
         "mode": data.get("mode") or "oauth",
@@ -68,7 +74,7 @@ def public_view(data: dict) -> dict:
         "oauth_client_id": data.get("oauth_client_id") or "",
         "has_secret": bool(data.get("oauth_client_secret")),
         "connected": bool(data.get("refresh_token")),
-        "shared_drive_id": data.get("shared_drive_id") or "",
+        "folder_id": root_folder_id(data),
         "has_service_account": bool(data.get("service_account_json")),
         "has_bale_token": bool(data.get("bale_bot_token")),
         "has_telegram_token": bool(data.get("telegram_bot_token")),
@@ -83,7 +89,8 @@ def apply_form(current: dict, form) -> dict:
     data["mode"] = mode if mode in ("oauth", "service_account") else "oauth"
     data["folder_template"] = (form.get("folder_template") or "").strip()[:200] or "Invoices/{year}"
     data["auto_save_on_send"] = form.get("auto_save") == "on"
-    data["shared_drive_id"] = (form.get("shared_drive_id") or "").strip()[:128]
+    data["folder_id"] = (form.get("folder_id") or "").strip()[:128]
+    data["shared_drive_id"] = ""
     client_id = (form.get("oauth_client_id") or "").strip()
     if client_id and client_id != data.get("oauth_client_id"):
         data["oauth_client_id"] = client_id
@@ -192,8 +199,8 @@ def _jwt(info: dict) -> str:
 def _bearer(db, data: dict) -> str:
     now = time.time()
     if data["mode"] == "service_account":
-        if not data["service_account_json"] or not data["shared_drive_id"]:
-            raise RuntimeError("Service account JSON and Shared Drive id are required.")
+        if not data["service_account_json"] or not root_folder_id(data):
+            raise RuntimeError("Service account JSON and a Drive folder id are required.")
         if data["sa_access_token"] and data["sa_access_expires"] > now + 60:
             return data["sa_access_token"]
         info = json.loads(data["service_account_json"])
@@ -278,24 +285,25 @@ def _quote_query(name: str) -> str:
     return name.replace("\\", "\\\\").replace("'", "\\'")
 
 
-def _find_folder(token: str, name: str, parent: str, shared_drive_id: str) -> str | None:
+def _find_folder(token: str, name: str, parent: str) -> str | None:
     query = (
         f"name = '{_quote_query(name)}' and mimeType = 'application/vnd.google-apps.folder' "
         f"and '{parent}' in parents and trashed = false"
     )
-    params = {
-        "q": query,
-        "fields": "files(id,name)",
-        "pageSize": "5",
-        "supportsAllDrives": "true",
-        "includeItemsFromAllDrives": "true",
-        "corpora": "drive" if shared_drive_id else "user",
-    }
-    if shared_drive_id:
-        params["driveId"] = shared_drive_id
-    found = _api("GET", f"{DRIVE}/files?{urllib.parse.urlencode(params)}", token)
-    files = found.get("files") or []
-    return files[0]["id"] if files else None
+    for corpora in ("user", "allDrives"):
+        params = {
+            "q": query,
+            "fields": "files(id,name)",
+            "pageSize": "5",
+            "supportsAllDrives": "true",
+            "includeItemsFromAllDrives": "true",
+            "corpora": corpora,
+        }
+        found = _api("GET", f"{DRIVE}/files?{urllib.parse.urlencode(params)}", token)
+        files = found.get("files") or []
+        if files:
+            return files[0]["id"]
+    return None
 
 
 def _create_folder(token: str, name: str, parent: str) -> str:
@@ -321,10 +329,9 @@ def _destination(token: str, data: dict, invoice) -> str:
     else:
         year, month = invoice.issue_date.year, invoice.issue_date.month
     rendered = template.replace("{year}", str(year)).replace("{month}", f"{month:02d}")
-    shared = data["shared_drive_id"] if data["mode"] == "service_account" else ""
-    parent = shared or "root"
+    parent = root_folder_id(data) if data["mode"] == "service_account" else "root"
     for part in [piece for piece in rendered.split("/") if piece.strip()]:
-        found = _find_folder(token, part.strip(), parent, shared)
+        found = _find_folder(token, part.strip(), parent)
         parent = found or _create_folder(token, part.strip(), parent)
     return parent
 
@@ -334,9 +341,15 @@ def test_connection(db) -> str:
     token = _bearer(db, data)
     data = load_drive(db)
     if data["mode"] == "service_account":
-        drive_id = urllib.parse.quote(data["shared_drive_id"])
-        found = _api("GET", f"{DRIVE}/drives/{drive_id}", token)
-        return found.get("name") or data["shared_drive_id"]
+        folder_id = urllib.parse.quote(root_folder_id(data))
+        found = _api(
+            "GET",
+            f"{DRIVE}/files/{folder_id}?fields=id,name,mimeType&supportsAllDrives=true",
+            token,
+        )
+        if found.get("mimeType") != "application/vnd.google-apps.folder":
+            raise RuntimeError("That Drive id is not a folder.")
+        return found.get("name") or root_folder_id(data)
     about = _api("GET", f"{DRIVE}/about?fields=user", token)
     user = about.get("user") or {}
     return user.get("emailAddress") or "ok"

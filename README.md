@@ -88,13 +88,15 @@ The app requests `https://www.googleapis.com/auth/drive` because the narrower `d
 
 Paste the client id and secret in Settings, save, then use Connect Google. Tokens are encrypted with `APP_SECRET_KEY` and are not shown again. Leave a secret field blank to keep the saved value.
 
-### Service account (Shared Drive only)
+### Service account (folder)
 
-A service account cannot own files and cannot upload into My Drive. Google returns `storageQuotaExceeded`. Upload only into a Shared Drive ([folder guide](https://developers.google.com/workspace/drive/api/guides/folder), [shared drives](https://developers.google.com/workspace/drive/api/guides/about-shareddrives)).
+A service account has no Google Drive storage of its own. Share one of your folders with the service account, then save into that folder by its id. A Shared Drive id is not required.
 
 1. Create a service account and a JSON key.
-2. Add the service account email to the Shared Drive as Contributor or Content manager.
-3. Paste the Shared Drive id and the JSON key in Settings.
+2. In Google Drive, create a folder and share it with the service account email as Editor.
+3. Copy the folder id from the end of the folder URL and paste it, with the JSON key, in Settings.
+
+Google still owns each uploaded file by the account that creates it. If a personal My Drive folder is rejected with `storageQuotaExceeded`, use the OAuth connection above. That connection saves into your own Drive. ([folder guide](https://developers.google.com/workspace/drive/api/guides/folder))
 
 Uploads send `supportsAllDrives=true`. Files are created with `POST https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart` ([files.create](https://developers.google.com/workspace/drive/api/reference/rest/v3/files/create)). Each save adds a new file. It does not replace the previous one.
 

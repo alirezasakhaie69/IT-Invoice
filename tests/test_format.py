@@ -2,7 +2,7 @@ import unittest
 from types import SimpleNamespace
 
 from app.format import format_input, format_number, parse_int
-from app.drive import drive_is_pending, mark_drive_pending
+from app.drive import drive_is_pending, mark_drive_pending, root_folder_id
 from app.pdf import DEFAULT_ACCENT, normalize_accent, seller_heading
 
 
@@ -36,6 +36,11 @@ class DrivePendingTest(unittest.TestCase):
         self.assertTrue(drive_is_pending(marker, started + 10))
         self.assertFalse(drive_is_pending(marker, started + 601))
         self.assertFalse(drive_is_pending("HTTP 504"))
+
+    def test_service_account_uses_a_folder_id(self):
+        self.assertEqual(root_folder_id({"folder_id": "folder-1", "shared_drive_id": "old"}), "folder-1")
+        self.assertEqual(root_folder_id({"shared_drive_id": "old-drive"}), "old-drive")
+        self.assertEqual(root_folder_id({}), "")
 
 
 if __name__ == "__main__":
