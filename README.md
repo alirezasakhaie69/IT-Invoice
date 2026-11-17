@@ -92,15 +92,13 @@ Paste the client id and secret in Settings, save, then use Connect Google. Token
 
 ### Service account (folder)
 
-A service account has no Google Drive storage of its own. Share one of your folders with the service account, then save into that folder by its id. A Shared Drive id is not required.
+A service account has no Drive storage of its own, so it does not create the year folders. Share one of your personal My Drive folders with the service account, and the upload uses that folder id as the file’s parent. A Shared Drive is not used.
 
 1. Create a service account and a JSON key.
 2. In Google Drive, create a folder and share it with the service account email as Editor.
 3. Copy the folder id from the end of the folder URL and paste it, with the JSON key, in Settings.
 
-Google still owns each uploaded file by the account that creates it. If a personal My Drive folder is rejected with `storageQuotaExceeded`, use the OAuth connection above. That connection saves into your own Drive. ([folder guide](https://developers.google.com/workspace/drive/api/guides/folder))
-
-Files are created with `POST https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart` ([files.create](https://developers.google.com/workspace/drive/api/reference/rest/v3/files/create)). A personal folder is used as-is. `supportsAllDrives=true` is added only when that folder is in a shared drive. Each save adds a new file. It does not replace the previous one. Year folders are found with a query limited to the parent folder. A search across every shared drive is not used, because that call stalls.
+Authentication calls `service_account.Credentials.from_service_account_file` with that JSON. The PDF is created with `parents` set to the folder id: `POST https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart` ([files.create](https://developers.google.com/workspace/drive/api/reference/rest/v3/files/create)). `supportsAllDrives=true` is added only when Drive says the folder is in a shared drive. Each save adds a new file. It does not replace the previous one. The folder path with `{year}` is used for the OAuth connection. A search across every shared drive is not used, because that call stalls.
 
 ## How invoices work
 
@@ -132,7 +130,7 @@ Deviations from the [Factor-Builder](https://github.com/Alirewa/Factor-Builder) 
 - A customer must start the bot before it can be messaged.
 - Telegram may need `TELEGRAM_PROXY_URL` on some networks. SOCKS proxies are not supported.
 - A retry can deliver another copy of the file.
-- A service account can save into a folder shared with it. If Google rejects the upload because the service account has no storage quota, connect with OAuth instead.
+- A service account saves into the personal folder shared with it. That folder id is the file’s parent. The OAuth connection still creates `{year}` folders in the connected account’s own Drive.
 - The OAuth client must be allowed to use the full Drive scope.
 - Sessions end 3 hours after login and are not extended by activity.
 - Quantity is a whole number and may be negative, which subtracts a return from the total. Money is not converted between rial and toman. Bot tokens can be saved in Settings; a blank field keeps the environment variable. Downloaded and Drive PDFs are named with the document number and the customer name. The formal PDF color is chosen on the invoice.

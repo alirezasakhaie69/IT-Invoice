@@ -5,7 +5,7 @@ from app.format import format_input, format_number, parse_int
 from app.main import FormView, parse_lines
 from app.pdf import _ENV
 import app.drive as drive
-from app.drive import drive_is_pending, explain_drive_error, mark_drive_pending, root_folder_id
+from app.drive import drive_is_pending, mark_drive_pending, root_folder_id
 from app.pdf import DEFAULT_ACCENT, normalize_accent, seller_heading
 
 
@@ -84,10 +84,53 @@ class DrivePendingTest(unittest.TestCase):
         self.assertNotIn("supportsAllDrives", seen[0])
         self.assertIn("supportsAllDrives=true", seen[1])
 
-    def test_service_account_quota_is_explained(self):
-        text = explain_drive_error("Service Accounts do not have storage quota.")
-        self.assertIn("OAuth", text)
-        self.assertNotIn("storage quota", text.lower())
+    def test_service_account_uploads_into_the_personal_folder(self):
+        invoice = SimpleNamespace(language="fa", issue_date=None)
+        created = []
+        original = drive._create_folder
+        drive._create_folder = lambda *args: created.append(args) or "child"
+        try:
+            parent = drive._destination(
+                "token",
+                {"mode": "service_account", "folder_id": "folder-9", "folder_template": "/{year}"},
+                invoice,
+            )
+        finally:
+            drive._create_folder = original
+        self.assertEqual(parent, "folder-9")
+        self.assertEqual(created, [])
+
+    def test_service_account_credentials_come_from_a_file(self):
+        import json
+        import os
+
+        import google.oauth2.service_account as service_account
+
+        seen = {}
+
+        class Creds:
+            @staticmethod
+            def from_service_account_file(path, scopes=None):
+                seen["existed"] = os.path.isfile(path)
+                with open(path, encoding="utf-8") as handle:
+                    seen["email"] = json.load(handle)["client_email"]
+                seen["scopes"] = list(scopes or [])
+                seen["path"] = path
+                return Creds()
+
+        original = service_account.Credentials.from_service_account_file
+        service_account.Credentials.from_service_account_file = Creds.from_service_account_file
+        try:
+            drive._service_account_credentials({
+                "client_email": "sa@example.iam.gserviceaccount.com",
+                "token_uri": "https://oauth2.googleapis.com/token",
+            })
+        finally:
+            service_account.Credentials.from_service_account_file = original
+        self.assertTrue(seen["existed"])
+        self.assertEqual(seen["email"], "sa@example.iam.gserviceaccount.com")
+        self.assertIn("https://www.googleapis.com/auth/drive", seen["scopes"])
+        self.assertFalse(os.path.exists(seen["path"]))
 
 
 def _pdf_context():

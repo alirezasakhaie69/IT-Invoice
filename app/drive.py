@@ -1,14 +1,12 @@
-import base64
 import hashlib
 import hmac
 import json
 import logging
+import os
 import secrets
+import tempfile
 import time
 import urllib.parse
-
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import padding
 
 from app.config import app_base_url, app_secret
 from app.crypto import decrypt_json, encrypt_json, redact
@@ -176,24 +174,44 @@ def _post_form(url: str, fields: dict) -> dict:
     return parsed
 
 
-def _b64(data: bytes) -> bytes:
-    return base64.urlsafe_b64encode(data).rstrip(b"=")
+class _TokenResponse:
+    def __init__(self, status: int, data: bytes):
+        self.status = status
+        self.data = data
+        self.headers: dict[str, str] = {}
 
 
-def _jwt(info: dict) -> str:
-    now = int(time.time())
-    header = _b64(json.dumps({"alg": "RS256", "typ": "JWT"}, separators=(",", ":")).encode())
-    payload = _b64(json.dumps({
-        "iss": info["client_email"],
-        "scope": SCOPE,
-        "aud": info.get("token_uri") or TOKEN_URL,
-        "iat": now,
-        "exp": now + 3600,
-    }, separators=(",", ":")).encode())
-    signing = header + b"." + payload
-    key = serialization.load_pem_private_key(info["private_key"].encode(), password=None)
-    signature = key.sign(signing, padding.PKCS1v15(), hashes.SHA256())
-    return (signing + b"." + _b64(signature)).decode()
+class _TokenRequest:
+    """google-auth transport that keeps the token call on the same IPv4 path as the upload."""
+
+    def __call__(self, url, method="GET", body=None, headers=None, timeout=None, **kwargs):
+        from app.send import exchange
+
+        payload = body.encode() if isinstance(body, str) else body
+        status, raw = exchange(
+            url,
+            method=method,
+            data=payload,
+            headers=dict(headers or {}),
+            timeout=timeout or 60,
+            prefer_ipv4=True,
+        )
+        return _TokenResponse(status, raw)
+
+
+def _service_account_credentials(info: dict):
+    from google.oauth2 import service_account
+
+    directory = tempfile.mkdtemp()
+    path = os.path.join(directory, "service-account.json")
+    try:
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump(info, handle)
+        return service_account.Credentials.from_service_account_file(path, scopes=[SCOPE])
+    finally:
+        if os.path.exists(path):
+            os.remove(path)
+        os.rmdir(directory)
 
 
 def _bearer(db, data: dict) -> str:
@@ -204,12 +222,15 @@ def _bearer(db, data: dict) -> str:
         if data["sa_access_token"] and data["sa_access_expires"] > now + 60:
             return data["sa_access_token"]
         info = json.loads(data["service_account_json"])
-        token = _post_form(info.get("token_uri") or TOKEN_URL, {
-            "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
-            "assertion": _jwt(info),
-        })
-        data["sa_access_token"] = token["access_token"]
-        data["sa_access_expires"] = int(now + int(token.get("expires_in", 3600)))
+        credentials = _service_account_credentials(info)
+        credentials.refresh(_TokenRequest())
+        if not credentials.token:
+            raise RuntimeError("Google did not return an access token.")
+        remaining = 3600
+        if credentials.expiry is not None:
+            remaining = max(60, int(credentials.expiry.timestamp() - now))
+        data["sa_access_token"] = credentials.token
+        data["sa_access_expires"] = int(now + remaining)
         save_drive(db, data)
         return data["sa_access_token"]
     if not data["refresh_token"] or not data["oauth_client_id"] or not data["oauth_client_secret"]:
@@ -266,17 +287,6 @@ class DriveCallError(RuntimeError):
         self.status = status
 
 
-def explain_drive_error(message: str) -> str:
-    text = message or ""
-    lowered = text.lower()
-    if "storagequotaexceeded" in lowered or "storage quota" in lowered:
-        return (
-            "This service account cannot store files in a personal Drive folder. "
-            "In Settings, choose OAuth and connect the Google account that owns the folder."
-        )
-    return text
-
-
 def _api(method: str, url: str, token: str, body: bytes | None = None, content_type: str | None = None):
     from app.send import exchange
 
@@ -294,7 +304,7 @@ def _api(method: str, url: str, token: str, body: bytes | None = None, content_t
             message = error.get("message") or str(error)
         else:
             message = str(error or f"HTTP {status}")
-        raise DriveCallError(explain_drive_error(redact(message)), status)
+        raise DriveCallError(redact(message), status)
     return parsed
 
 
@@ -342,13 +352,18 @@ def _create_folder(token: str, name: str, parent: str) -> str:
 
 
 def _destination(token: str, data: dict, invoice) -> str:
+    # A service account has no Drive storage. The PDF must be created inside the
+    # personal folder shared with it, with that folder id as the parent. A subfolder
+    # created by the service account is owned by the service account and cannot hold the file.
+    if data["mode"] == "service_account":
+        return root_folder_id(data)
     template = (data.get("folder_template") or "Invoices/{year}").strip()
     if invoice.language == "fa":
         year, month, _day = to_jalali(invoice.issue_date)
     else:
         year, month = invoice.issue_date.year, invoice.issue_date.month
     rendered = template.replace("{year}", str(year)).replace("{month}", f"{month:02d}")
-    parent = root_folder_id(data) if data["mode"] == "service_account" else "root"
+    parent = "root"
     for part in [piece for piece in rendered.split("/") if piece.strip()]:
         found = _find_folder(token, part.strip(), parent)
         parent = found or _create_folder(token, part.strip(), parent)
