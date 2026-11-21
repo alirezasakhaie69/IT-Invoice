@@ -6,7 +6,7 @@ from app.main import FormView, parse_lines
 from app.pdf import _ENV
 import app.drive as drive
 from app.drive import drive_is_pending, mark_drive_pending, root_folder_id
-from app.pdf import DEFAULT_ACCENT, normalize_accent, seller_heading
+from app.pdf import DEFAULT_ACCENT, DEFAULT_TEMPLATE, normalize_accent, normalize_template, seller_heading, split_item_text
 
 
 class NumberFormatTest(unittest.TestCase):
@@ -30,6 +30,9 @@ class StoreNameTest(unittest.TestCase):
         self.assertEqual(hidden, "الهام")
         self.assertEqual(normalize_accent(""), DEFAULT_ACCENT)
         self.assertEqual(DEFAULT_ACCENT, "#ea580c")
+        self.assertEqual(normalize_template(""), DEFAULT_TEMPLATE)
+        self.assertEqual(normalize_template("formal"), "formal")
+        self.assertEqual(split_item_text("Cable\nInstallation"), ("Cable", "Installation"))
 
 
 class DrivePendingTest(unittest.TestCase):
@@ -221,6 +224,8 @@ def _pdf_context():
         "lines": [{
             "position": "1",
             "description": "Cable\nInstallation",
+            "item_name": "Cable",
+            "item_note": "Installation",
             "quantity": "1",
             "unit": "pc",
             "unit_price": "1",
@@ -257,7 +262,7 @@ class LineDescriptionTest(unittest.TestCase):
 
     def test_pdf_templates_keep_description_breaks(self):
         context = _pdf_context()
-        for name in ("pdf/formal.html", "pdf/store.html"):
+        for name in ("pdf/formal.html", "pdf/store.html", "pdf/modern.html"):
             html = _ENV.get_template(name).render(**context)
             self.assertIn("white-space: pre-line", html)
             self.assertIn("Cable\nInstallation", html)

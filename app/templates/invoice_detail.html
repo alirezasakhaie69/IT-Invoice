@@ -69,6 +69,7 @@
 </div>
 <div class="card actions">
   <a class="btn btn-secondary" href="/invoices/{{ invoice.id }}/edit">{{ t('edit') }}</a>
+  <a class="btn btn-tint" href="#pdf-preview">{{ t('preview_pdf') }}</a>
   <a class="btn btn-secondary" href="/invoices/{{ invoice.id }}/pdf">{{ t('download_pdf') }}</a>
   <form method="post" action="/invoices/{{ invoice.id }}/send">
     <input type="hidden" name="csrf_token" value="{{ csrf }}">
@@ -99,6 +100,11 @@
   </form>
 </div>
 <p class="hint">{{ t('help_bots') }} {{ t('help_retry') }}</p>
+<div class="card" id="pdf-preview">
+  <h2>{{ t('preview_pdf') }}</h2>
+  <p class="hint">{{ t('help_preview') }}</p>
+  <iframe class="pdf-frame" title="{{ t('preview_pdf') }}" src="/invoices/{{ invoice.id }}/preview"></iframe>
+</div>
 {% if drive_pending %}
 <div class="alert alert-ok">{{ t('drive_saving') }}</div>
 <script>setTimeout(function () { location.replace(location.pathname); }, 3000);</script>

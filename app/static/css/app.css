@@ -185,6 +185,13 @@ textarea.input.line-text { min-height: 4.5rem; line-height: 1.45; }
 .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
 .hint { color: var(--muted); font-size: 0.8rem; margin: 0.25rem 0 0.75rem; }
 .notes-text, .desc-text { white-space: pre-line; margin-top: 0; }
+.pdf-frame {
+  width: 100%;
+  min-height: 72vh;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0b1220;
+}
 .alert { border-radius: 8px; padding: 0.7rem 0.85rem; margin-bottom: 0.8rem; border: 1px solid transparent; }
 .alert-ok { background: rgba(6, 78, 59, 0.25); color: #34d399; border-color: #10b981; }
 .alert-error { background: rgba(127, 29, 29, 0.3); color: #f87171; border-color: #ef4444; }

@@ -45,9 +45,12 @@ def render_invoice_pdf(invoice, customer, issuer) -> bytes:
     money = invoice_money(invoice)
     lines = []
     for line, part in zip(invoice.lines, money["lines"]):
+        item_name, item_note = split_item_text(line.description)
         lines.append({
             "position": format_number(line.position, locale),
             "description": line.description,
+            "item_name": item_name,
+            "item_note": item_note,
             "quantity": format_number(line.quantity, locale),
             "unit": line.unit,
             "unit_price": format_number(line.unit_price, locale),
@@ -85,16 +88,19 @@ def render_invoice_pdf(invoice, customer, issuer) -> bytes:
         "discount": format_number(money["discount"], locale),
         "tax": format_number(money["tax"], locale),
         "total": format_number(money["total"], locale),
+        "quantity_total": format_number(sum(line.quantity for line in invoice.lines), locale),
         "words": amount_in_words(money["total"], invoice.currency, locale),
         "notes": (getattr(invoice, "notes", "") or "").strip(),
         **accent_style(getattr(invoice, "accent", "")),
     }
-    name = "pdf/store.html" if invoice.template == "store" else "pdf/formal.html"
+    name = pdf_template_file(getattr(invoice, "template", ""))
     html = _ENV.get_template(name).render(**context)
     from weasyprint import HTML
     return HTML(string=html, base_url=str(FONT_DIR)).write_pdf()
 
 
+DEFAULT_TEMPLATE = "modern"
+TEMPLATES = ("modern", "formal", "store")
 DEFAULT_ACCENT = "#ea580c"
 FORMAL_COLORS = (
     ("red", "#dc2626"),
@@ -123,6 +129,23 @@ def seller_heading(invoice, issuer, locale: str) -> tuple[str, list[tuple[str, s
         (translate(locale, "address"), getattr(issuer, "address", "") or ""),
     ])
     return title, rows
+
+
+def normalize_template(value: str) -> str:
+    name = (value or "").strip().lower()
+    return name if name in TEMPLATES else DEFAULT_TEMPLATE
+
+
+def pdf_template_file(value: str) -> str:
+    return f"pdf/{normalize_template(value)}.html"
+
+
+def split_item_text(description: str) -> tuple[str, str]:
+    text = (description or "").replace("\r\n", "\n").replace("\r", "\n").strip()
+    if "\n" not in text:
+        return text, ""
+    first, rest = text.split("\n", 1)
+    return first.strip(), rest.strip()
 
 
 def normalize_accent(value: str) -> str:

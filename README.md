@@ -37,7 +37,7 @@ docker compose run --rm web python -m unittest discover -s tests -v
 docker compose run --rm web python -m app.samples
 ```
 
-This writes `samples/invoice-fa-store.pdf` and `samples/invoice-en-formal.pdf`.
+This writes `samples/invoice-fa-modern.pdf` and `samples/invoice-en-formal.pdf`.
 
 ## Environment
 
@@ -114,7 +114,7 @@ Authentication calls `service_account.Credentials.from_service_account_file` wit
 
 ## PDF
 
-Each invoice is Store (monochrome pad) or Formal. A new formal invoice starts orange (`#ea580c`). Both are A4, use the vendored Vazirmatn font, and follow the invoice language. The sheet is white. The application around it is dark only. The store name is printed unless “Show store name on the invoice” is turned off.
+Each invoice is Modern, Formal, or Store. A new invoice starts on Modern, orange (`#ea580c`). Modern and Formal share the same five colors. All three are A4, use the vendored Vazirmatn font, and follow the invoice language. The sheet is white. The application around it is dark only. The store name is printed unless “Show store name on the invoice” is turned off. The invoice page shows the PDF before download or Drive save.
 
 Deviations from the [Factor-Builder](https://github.com/Alirewa/Factor-Builder) templates:
 
@@ -133,7 +133,7 @@ Deviations from the [Factor-Builder](https://github.com/Alirewa/Factor-Builder) 
 - A service account cannot store a file in a personal Drive. After Connect Google, that account saves the file into the folder id, including `{year}` folders inside it.
 - The OAuth client must be allowed to use the full Drive scope.
 - Sessions end 3 hours after login and are not extended by activity.
-- Quantity is a whole number and may be negative, which subtracts a return from the total. Money is not converted between rial and toman. Bot tokens can be saved in Settings; a blank field keeps the environment variable. Downloaded and Drive PDFs are named with the document number and the customer name. The formal PDF color is chosen on the invoice.
+- Quantity is a whole number and may be negative, which subtracts a return from the total. Money is not converted between rial and toman. Bot tokens can be saved in Settings; a blank field keeps the environment variable. Downloaded and Drive PDFs are named with the document number and the customer name. Modern and Formal colors are chosen on the invoice.
 - There is one seller profile, no logo, and no light theme.
 - This is a single-server app. The login limit and the send lock live in SQLite.
 

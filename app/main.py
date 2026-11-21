@@ -75,7 +75,7 @@ from app.models import (
     SessionRow,
     User,
 )
-from app.pdf import DEFAULT_ACCENT, FORMAL_COLORS, normalize_accent, pdf_filename
+from app.pdf import DEFAULT_ACCENT, DEFAULT_TEMPLATE, FORMAL_COLORS, normalize_accent, normalize_template, pdf_filename
 from app.send import pdf_path, send_invoice, write_pdf
 
 log = logging.getLogger("invoice")
@@ -513,7 +513,7 @@ def empty_invoice_values(locale: str) -> dict:
     return {
         "customer_id": None,
         "doc_type": "invoice",
-        "template": "store",
+        "template": DEFAULT_TEMPLATE,
         "language": locale,
         "currency": "rial",
         "issue_date": date.today().isoformat(),
@@ -622,7 +622,7 @@ def save_invoice(request: Request, invoice_id: int | None):
         doc_type = invoice.doc_type if invoice else form.get("doc_type")
         if doc_type not in ("invoice", "proforma"):
             doc_type = "invoice"
-        template_name = form.get("template") if form.get("template") in ("store", "formal") else "store"
+        template_name = normalize_template(form.get("template"))
         language = form.get("language") if form.get("language") in ("fa", "en") else locale
         currency = invoice.currency if invoice else form.get("currency")
         if currency not in ("rial", "toman"):
@@ -805,6 +805,17 @@ def download_pdf(request: Request, invoice_id: int):
         path = write_pdf(invoice, invoice.customer, get_issuer(db))
         filename = pdf_filename(invoice, invoice.customer.name if invoice.customer else "")
     return FileResponse(path, media_type="application/pdf", filename=filename)
+
+
+@app.get("/invoices/{invoice_id}/preview")
+def preview_pdf(request: Request, invoice_id: int):
+    with session() as db:
+        invoice = load_invoice(db, invoice_id)
+        if invoice is None:
+            return html(request, "missing.html", status_code=404)
+        path = write_pdf(invoice, invoice.customer, get_issuer(db))
+        filename = pdf_filename(invoice, invoice.customer.name if invoice.customer else "")
+    return FileResponse(path, media_type="application/pdf", filename=filename, content_disposition_type="inline")
 
 
 @app.post("/invoices/{invoice_id}/send")

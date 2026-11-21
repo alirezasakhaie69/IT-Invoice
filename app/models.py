@@ -76,7 +76,7 @@ class Invoice(Base):
     doc_type: Mapped[str] = mapped_column(String(16), nullable=False)
     number: Mapped[str] = mapped_column(String(32), nullable=False)
     proforma_number: Mapped[str | None] = mapped_column(String(32), nullable=True, unique=True)
-    template: Mapped[str] = mapped_column(String(16), nullable=False, default="store")
+    template: Mapped[str] = mapped_column(String(16), nullable=False, default="modern")
     accent: Mapped[str] = mapped_column(String(7), nullable=False, default="#ea580c")
     show_store_name: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     language: Mapped[str] = mapped_column(String(2), nullable=False, default="fa")

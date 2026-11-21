@@ -26,7 +26,7 @@ def _invoice(**kwargs):
         number="1405-012",
         accent="#ea580c",
         proforma_number=None,
-        template="store",
+        template="modern",
         language="fa",
         currency="rial",
         issue_date=date(2026, 3, 21),
@@ -49,7 +49,7 @@ def main():
     out = Path("samples")
     out.mkdir(parents=True, exist_ok=True)
     persian = render_invoice_pdf(
-        _invoice(template="store", language="fa", currency="rial", lines=_lines("عدد")),
+        _invoice(template="modern", language="fa", currency="rial", lines=_lines("عدد")),
         _customer("رضا محمدی", "اصفهان، خیابان نمونه"),
         _issuer(),
     )
@@ -66,7 +66,7 @@ def main():
         SimpleNamespace(company="Sample Pars Co.", contact_name="Elham Karimi", phone="02100000000", address="Tehran, Example Street", tax_id="10101010101"),
     )
     # English issuer should be Latin for the English sheet.
-    (out / "invoice-fa-store.pdf").write_bytes(persian)
+    (out / "invoice-fa-modern.pdf").write_bytes(persian)
     (out / "invoice-en-formal.pdf").write_bytes(english)
     print(f"fa bytes={len(persian)} vazirmatn={'Vazirmatn' in persian.decode('latin1', errors='ignore')}")
     print(f"en bytes={len(english)} vazirmatn={'Vazirmatn' in english.decode('latin1', errors='ignore')}")
