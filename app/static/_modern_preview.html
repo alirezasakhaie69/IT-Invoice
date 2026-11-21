@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <style>
+    
+    @page { size: A4; margin: 12mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Vazirmatn, sans-serif; color: #0f172a; background: #ffffff; font-size: 11px; line-height: 1.7; }
+    .sheet { border: 1px solid #ea580c; }
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 18px 14px;
+      background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
+      border-bottom: 3px solid #ea580c;
+    }
+    .brand { font-size: 22px; font-weight: 900; color: #ea580c; line-height: 1.3; }
+    .hero-title { margin: 4px 0 0; color: #334155; font-size: 12.5px; font-weight: 700; }
+    .meta-card { min-width: 210px; background: #ea580c; color: #ffffff; border-radius: 10px; padding: 10px 12px; }
+    .meta-row { display: flex; justify-content: space-between; gap: 10px; font-size: 11px; margin: 3px 0; }
+    .meta-row span { opacity: 0.9; }
+    .meta-row strong { font-weight: 800; direction: ltr; }
+    .block { margin: 14px 16px; }
+    .block h2 {
+      margin: 0 0 8px;
+      background: #ea580c;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 6px 10px;
+      border-radius: 6px;
+    }
+    .buyer p { margin: 3px 0; color: #334155; }
+    .buyer em { color: #64748b; font-style: normal; }
+    .buyer .name { font-weight: 800; }
+    table.items { width: 100%; border-collapse: collapse; border: 1.5px solid #ea580c; }
+    table.items th, table.items td { border: 1px solid #ea580c; padding: 8px 7px; font-size: 11px; vertical-align: middle; }
+    table.items th { background: #ea580c; color: #ffffff; font-size: 10.5px; font-weight: 700; text-align: center; }
+    table.items td.desc { white-space: pre-line; vertical-align: top; line-height: 1.7; text-align: start; }
+    table.items tr.alt td { background: #fff7ed; }
+    .money { direction: ltr; text-align: left; font-weight: 700; }
+    .sum-row td { background: #fff7ed; font-weight: 800; }
+    .totals { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .totals div { border: 1px solid #fdba74; border-radius: 8px; padding: 8px 10px; }
+    .totals span { display: block; color: #64748b; font-size: 10px; }
+    .totals strong { display: block; margin-top: 2px; font-size: 13px; color: #ea580c; direction: ltr; }
+    .sign { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 18px 16px 8px; }
+    .sign-box { border: 1px dashed #ea580c; border-radius: 8px; min-height: 78px; padding: 8px 10px; color: #64748b; font-size: 10.5px; }
+    .notes { margin: 0 16px 10px; padding: 8px 10px; border: 1px solid #fdba74; border-radius: 8px; }
+    .notes strong { display: block; color: #ea580c; font-size: 10.5px; margin-bottom: 3px; }
+    .notes p { margin: 0; white-space: pre-line; color: #475569; }
+    .pay { margin: 0 16px 16px; padding: 10px 12px; background: #ea580c; color: #ffffff; border-radius: 8px; }
+    .pay strong { font-size: 15px; direction: ltr; }
+    .pay .words { margin-top: 4px; font-size: 11px; opacity: 0.95; }
+  </style>
+</head>
+<body>
+  <div class="sheet">
+    <div class="hero">
+      <div>
+        <div class="brand">اساس سیستم</div>
+        <div class="hero-title">صورتحساب فروش کالا / خدمات</div>
+      </div>
+      <div class="meta-card">
+        <div class="meta-row"><span>شماره فاکتور</span><strong>1604</strong></div>
+        <div class="meta-row"><span>تاریخ</span><strong>1405/08/11</strong></div>
+        <div class="meta-row"><span>سررسید</span><strong>-</strong></div>
+      </div>
+    </div>
+    <div class="block buyer">
+      <h2>مشخصات خریدار</h2>
+      <p><em>نام خریدار:</em> <strong class="name">نمایندگی لوکانو</strong></p>
+      
+      <p><em>تلفن:</em> 09120000000</p>
+      
+      <p><em>نشانی:</em> تهران</p>
+      
+    </div>
+    <div class="block">
+      <h2>مشخصات کالا/ خدمات</h2>
+      <table class="items">
+        <thead>
+          <tr>
+            <th>ردیف</th>
+            <th>نام کالا/خدمات</th>
+            <th>تعداد</th>
+            <th>واحد</th>
+            <th>بهای واحد (ریال)</th>
+            <th>مبلغ کل (ریال)</th>
+            <th>شرح کالا</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+          <tr class="">
+            <td style="text-align:center">1</td>
+            <td>شارژ اینترنت آسیاتک</td>
+            <td style="text-align:center">1</td>
+            <td style="text-align:center">مورد</td>
+            <td class="money">11,000,000</td>
+            <td class="money">11,000,000</td>
+            <td class="desc">100 گیگ</td>
+          </tr>
+          
+          
+          <tr class="sum-row">
+            <td colspan="2">جمع کل</td>
+            <td style="text-align:center">1</td>
+            <td></td>
+            <td></td>
+            <td class="money">11,000,000</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="totals">
+        <div><span>مبلغ قابل پرداخت</span><strong>11,000,000 ریال</strong></div>
+        <div><span>تخفیف</span><strong>0 ریال</strong></div>
+        <div><span>مالیات</span><strong>0 ریال</strong></div>
+      </div>
+    </div>
+    <div class="sign">
+      <div class="sign-box">مهر و امضای فروشنده</div>
+      <div class="sign-box">مهر و امضای خریدار</div>
+    </div>
+    
+    <div class="pay">
+      <div>مبلغ قابل پرداخت: <strong>11,000,000 ریال</strong></div>
+      <div class="words">مبلغ به حروف: یازده میلیون ریال</div>
+    </div>
+  </div>
+</body>
+</html>

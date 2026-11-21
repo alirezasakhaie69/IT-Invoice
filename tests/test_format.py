@@ -242,6 +242,7 @@ def _pdf_context():
         "discount": "0",
         "tax": "0",
         "total": "1",
+        "quantity_total": "1",
         "words": "one",
     }
 
@@ -262,11 +263,21 @@ class LineDescriptionTest(unittest.TestCase):
 
     def test_pdf_templates_keep_description_breaks(self):
         context = _pdf_context()
-        for name in ("pdf/formal.html", "pdf/store.html", "pdf/modern.html"):
+        for name in ("pdf/formal.html", "pdf/store.html"):
             html = _ENV.get_template(name).render(**context)
             self.assertIn("white-space: pre-line", html)
             self.assertIn("Cable\nInstallation", html)
             self.assertIn('class="desc"', html)
+        modern = _ENV.get_template("pdf/modern.html").render(**context)
+        self.assertIn("white-space: pre-line", modern)
+        self.assertIn('class="desc"', modern)
+        self.assertIn(">Installation</td>", modern)
+
+    def test_modern_template_bolds_the_customer_and_draws_item_borders(self):
+        html = _ENV.get_template("pdf/modern.html").render(**_pdf_context())
+        self.assertIn('<strong class="name">Buyer</strong>', html)
+        self.assertIn("border-collapse: collapse", html)
+        self.assertIn("table.items th, table.items td { border: 1px solid", html)
 
 
 if __name__ == "__main__":

@@ -35,9 +35,10 @@
     }
     .buyer p { margin: 3px 0; color: #334155; }
     .buyer em { color: #64748b; font-style: normal; }
-    table.items { width: 100%; border-collapse: collapse; }
-    table.items th { background: {{ accent }}; color: #ffffff; font-size: 10.5px; font-weight: 700; padding: 8px 7px; text-align: center; }
-    table.items td { padding: 8px 7px; border-bottom: 1px solid {{ accent_line }}; font-size: 11px; vertical-align: middle; }
+    .buyer .name { font-weight: 800; }
+    table.items { width: 100%; border-collapse: collapse; border: 1.5px solid {{ accent }}; }
+    table.items th, table.items td { border: 1px solid {{ accent }}; padding: 8px 7px; font-size: 11px; vertical-align: middle; }
+    table.items th { background: {{ accent }}; color: #ffffff; font-size: 10.5px; font-weight: 700; text-align: center; }
     table.items td.desc { white-space: pre-line; vertical-align: top; line-height: 1.7; text-align: start; }
     table.items tr.alt td { background: {{ accent_soft }}; }
     .money { direction: ltr; text-align: left; font-weight: 700; }
@@ -71,7 +72,7 @@
     </div>
     <div class="block buyer">
       <h2>{{ t('spec_of', label=t('buyer')) }}</h2>
-      {% if buyer.title %}<p><em>{{ t('name') }}:</em> {{ buyer.title }}</p>{% endif %}
+      {% if buyer.title %}<p><em>{{ t('name') }}:</em> <strong class="name">{{ buyer.title }}</strong></p>{% endif %}
       {% for label, value in buyer.rows %}
       {% if value %}<p><em>{{ label }}:</em> {{ value }}</p>{% endif %}
       {% endfor %}

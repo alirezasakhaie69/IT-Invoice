@@ -14,7 +14,7 @@
 </div>
 <div class="card">
   <div class="grid-2">
-    <p><strong>{{ t('customer') }}:</strong> {{ invoice.customer.name }}</p>
+    <p>{{ t('customer') }}: <strong>{{ invoice.customer.name }}</strong></p>
     <p><strong>{{ t('currency') }}:</strong> {{ t(invoice.currency) }}</p>
     <p><strong>{{ t('issue_date') }}:</strong> {{ format_date(invoice.issue_date) }}</p>
     <p><strong>{{ t('due_date') }}:</strong> {{ format_date(invoice.due_date) or t('dash') }}</p>
