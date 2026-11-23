@@ -40,7 +40,7 @@ def _party(title: str, rows: list[tuple[str, str]]) -> dict:
     return {"title": title, "rows": rows}
 
 
-def render_invoice_pdf(invoice, customer, issuer) -> bytes:
+def render_invoice_pdf(invoice, customer, issuer, transparency: int = 0) -> bytes:
     locale = invoice.language if invoice.language in ("fa", "en") else "fa"
     money = invoice_money(invoice)
     lines = []
@@ -91,7 +91,10 @@ def render_invoice_pdf(invoice, customer, issuer) -> bytes:
         "quantity_total": format_number(sum(line.quantity for line in invoice.lines), locale),
         "words": amount_in_words(money["total"], invoice.currency, locale),
         "notes": (getattr(invoice, "notes", "") or "").strip(),
-        **accent_style(getattr(invoice, "accent", "")),
+        **accent_style(
+            getattr(invoice, "accent", ""),
+            transparency if normalize_template(getattr(invoice, "template", "")) == "modern" else 0,
+        ),
     }
     name = pdf_template_file(getattr(invoice, "template", ""))
     html = _ENV.get_template(name).render(**context)
@@ -152,13 +155,30 @@ def normalize_accent(value: str) -> str:
     return _FORMAL_HEX.get((value or "").strip().lower(), DEFAULT_ACCENT)
 
 
-def accent_style(value: str) -> dict:
+def normalize_transparency(value) -> int:
+    try:
+        level = int(str(value).strip().rstrip("%"))
+    except (TypeError, ValueError):
+        return 0
+    return level if level in (0, 25, 50, 75, 100) else 0
+
+
+def accent_style(value: str, transparency: int = 0) -> dict:
     color = normalize_accent(value)
+    level = normalize_transparency(transparency)
     red, green, blue = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
+    alpha = (100 - level) / 100
+    ink = "#0f172a" if level > 25 else "#ffffff"
+    text = "#0f172a" if level > 25 else color
+    border = "#64748b" if level > 25 else color
     return {
         "accent": color,
-        "accent_soft": f"rgba({red}, {green}, {blue}, 0.06)",
-        "accent_line": f"rgba({red}, {green}, {blue}, 0.2)",
+        "accent_fill": f"rgba({red}, {green}, {blue}, {alpha})",
+        "accent_ink": ink,
+        "accent_text": text,
+        "accent_border": border,
+        "accent_soft": f"rgba({red}, {green}, {blue}, {0.06 * alpha})",
+        "accent_line": border if level > 25 else f"rgba({red}, {green}, {blue}, 0.2)",
     }
 
 

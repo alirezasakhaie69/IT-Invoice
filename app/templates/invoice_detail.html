@@ -70,7 +70,7 @@
 <div class="card actions">
   <a class="btn btn-secondary" href="/invoices/{{ invoice.id }}/edit">{{ t('edit') }}</a>
   <a class="btn btn-tint" href="#pdf-preview">{{ t('preview_pdf') }}</a>
-  <a class="btn btn-secondary" href="/invoices/{{ invoice.id }}/pdf">{{ t('download_pdf') }}</a>
+  <a class="btn btn-secondary" href="/invoices/{{ invoice.id }}/pdf?transparency={{ transparency }}">{{ t('download_pdf') }}</a>
   <form method="post" action="/invoices/{{ invoice.id }}/send">
     <input type="hidden" name="csrf_token" value="{{ csrf }}">
     <button class="btn btn-primary" type="submit">{{ t('resend') if invoice.delivery == 'sent' else t('send') }}</button>
@@ -100,11 +100,21 @@
   </form>
 </div>
 <p class="hint">{{ t('help_bots') }} {{ t('help_retry') }}</p>
+{% if invoice.template == 'modern' %}
+<form method="get" action="/invoices/{{ invoice.id }}" class="actions" style="margin-bottom:0.75rem">
+  <label for="transparency">{{ t('transparency') }}</label>
+  <select class="input" id="transparency" name="transparency" onchange="this.form.submit()" style="width:auto">
+    {% for level in [0, 25, 50, 75, 100] %}
+    <option value="{{ level }}" {% if transparency == level %}selected{% endif %}>{{ level }}%</option>
+    {% endfor %}
+  </select>
+</form>
+{% endif %}
 <div class="card" id="pdf-preview">
   <h2>{{ t('preview_pdf') }}</h2>
   <p class="hint">{{ t('help_preview') }}</p>
-  <iframe class="pdf-frame" title="{{ t('preview_pdf') }}" src="/invoices/{{ invoice.id }}/preview"></iframe>
-</div>
+  <iframe class="pdf-frame" title="{{ t('preview_pdf') }}" src="/invoices/{{ invoice.id }}/preview?transparency={{ transparency }}"></iframe>
+  </div>
 {% if drive_pending %}
 <div class="alert alert-ok">{{ t('drive_saving') }}</div>
 <script>setTimeout(function () { location.replace(location.pathname); }, 3000);</script>

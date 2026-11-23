@@ -123,9 +123,9 @@ def pdf_path(invoice_id: int) -> Path:
     return directory / f"{invoice_id}.pdf"
 
 
-def write_pdf(invoice, customer, issuer) -> Path:
+def write_pdf(invoice, customer, issuer, transparency: int = 0) -> Path:
     path = pdf_path(invoice.id)
-    path.write_bytes(render_invoice_pdf(invoice, customer, issuer))
+    path.write_bytes(render_invoice_pdf(invoice, customer, issuer, transparency))
     return path
 
 

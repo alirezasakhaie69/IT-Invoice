@@ -75,7 +75,7 @@ from app.models import (
     SessionRow,
     User,
 )
-from app.pdf import DEFAULT_ACCENT, DEFAULT_TEMPLATE, FORMAL_COLORS, normalize_accent, normalize_template, pdf_filename
+from app.pdf import DEFAULT_ACCENT, DEFAULT_TEMPLATE, FORMAL_COLORS, normalize_accent, normalize_template, pdf_filename, normalize_transparency
 from app.send import pdf_path, send_invoice, write_pdf
 
 log = logging.getLogger("invoice")
@@ -593,19 +593,21 @@ def create_invoice(request: Request):
 
 
 @app.get("/invoices/{invoice_id}")
-def invoice_detail(request: Request, invoice_id: int):
+def invoice_detail(request: Request, invoice_id: int, transparency: int = 0):
     with session() as db:
         invoice = load_invoice(db, invoice_id)
         if invoice is None:
             return html(request, "missing.html", status_code=404)
         view = present(invoice)
         today = date.today().isoformat()
+        level = normalize_transparency(transparency) if invoice.template == "modern" else 0
         return html(
             request,
             "invoice_detail.html",
             view=view,
             today=today,
             drive_pending=drive_is_pending(invoice.drive_error),
+            transparency=level,
         )
 
 
@@ -846,23 +848,25 @@ def delete_payment(request: Request, invoice_id: int, payment_id: int):
 
 
 @app.get("/invoices/{invoice_id}/pdf")
-def download_pdf(request: Request, invoice_id: int):
+def download_pdf(request: Request, invoice_id: int, transparency: int = 0):
     with session() as db:
         invoice = load_invoice(db, invoice_id)
         if invoice is None:
             return html(request, "missing.html", status_code=404)
-        path = write_pdf(invoice, invoice.customer, get_issuer(db))
+        level = normalize_transparency(transparency) if invoice.template == "modern" else 0
+        path = write_pdf(invoice, invoice.customer, get_issuer(db), level)
         filename = pdf_filename(invoice, invoice.customer.name if invoice.customer else "")
     return FileResponse(path, media_type="application/pdf", filename=filename)
 
 
 @app.get("/invoices/{invoice_id}/preview")
-def preview_pdf(request: Request, invoice_id: int):
+def preview_pdf(request: Request, invoice_id: int, transparency: int = 0):
     with session() as db:
         invoice = load_invoice(db, invoice_id)
         if invoice is None:
             return html(request, "missing.html", status_code=404)
-        path = write_pdf(invoice, invoice.customer, get_issuer(db))
+        level = normalize_transparency(transparency) if invoice.template == "modern" else 0
+        path = write_pdf(invoice, invoice.customer, get_issuer(db), level)
         filename = pdf_filename(invoice, invoice.customer.name if invoice.customer else "")
     return FileResponse(path, media_type="application/pdf", filename=filename, content_disposition_type="inline")
 
