@@ -593,7 +593,7 @@ def create_invoice(request: Request):
 
 
 @app.get("/invoices/{invoice_id}")
-def invoice_detail(request: Request, invoice_id: int, transparency: int = 0):
+def invoice_detail(request: Request, invoice_id: int, transparency: int = 25):
     with session() as db:
         invoice = load_invoice(db, invoice_id)
         if invoice is None:
@@ -848,7 +848,7 @@ def delete_payment(request: Request, invoice_id: int, payment_id: int):
 
 
 @app.get("/invoices/{invoice_id}/pdf")
-def download_pdf(request: Request, invoice_id: int, transparency: int = 0):
+def download_pdf(request: Request, invoice_id: int, transparency: int = 25):
     with session() as db:
         invoice = load_invoice(db, invoice_id)
         if invoice is None:
@@ -860,7 +860,7 @@ def download_pdf(request: Request, invoice_id: int, transparency: int = 0):
 
 
 @app.get("/invoices/{invoice_id}/preview")
-def preview_pdf(request: Request, invoice_id: int, transparency: int = 0):
+def preview_pdf(request: Request, invoice_id: int, transparency: int = 25):
     with session() as db:
         invoice = load_invoice(db, invoice_id)
         if invoice is None:

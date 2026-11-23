@@ -46,14 +46,14 @@
     .totals { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
     .totals div { border: 1px solid {{ accent_line }}; border-radius: 8px; padding: 8px 10px; }
     .totals span { display: block; color: #64748b; font-size: 10px; }
-    .totals strong { display: block; margin-top: 2px; font-size: 13px; color: {{ accent_text }}; direction: ltr; }
+    .totals strong { display: inline-flex; flex-direction: row; direction: ltr; gap: 0.35em; margin-top: 2px; font-size: 13px; color: {{ accent_text }}; }
     .sign { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 18px 16px 8px; }
     .sign-box { border: 1px dashed {{ accent_border }}; border-radius: 8px; min-height: 78px; padding: 8px 10px; color: #64748b; font-size: 10.5px; }
     .notes { margin: 0 16px 10px; padding: 8px 10px; border: 1px solid {{ accent_line }}; border-radius: 8px; }
     .notes strong { display: block; color: {{ accent_text }}; font-size: 10.5px; margin-bottom: 3px; }
     .notes p { margin: 0; white-space: pre-line; color: #475569; }
     .pay { margin: 0 16px 16px; padding: 10px 12px; background: {{ accent_fill }}; color: {{ accent_ink }}; border-radius: 8px; }
-    .pay strong { font-size: 15px; direction: ltr; }
+    .pay strong { display: inline-flex; flex-direction: row; direction: ltr; gap: 0.35em; font-size: 15px; }
     .pay .words { margin-top: 4px; font-size: 11px; opacity: 0.95; }
   </style>
 </head>
@@ -117,9 +117,9 @@
         </tbody>
       </table>
       <div class="totals">
-        <div><span>{{ t('payable') }}</span><strong>{{ total }} {{ currency }}</strong></div>
-        <div><span>{{ t('discount_total') }}</span><strong>{{ discount }} {{ currency }}</strong></div>
-        <div><span>{{ t('tax_total') }}</span><strong>{{ tax }} {{ currency }}</strong></div>
+        <div><span>{{ t('payable') }}</span><strong><span>{{ currency }}</span><span>{{ total }}</span></strong></div>
+        <div><span>{{ t('discount_total') }}</span><strong><span>{{ currency }}</span><span>{{ discount }}</span></strong></div>
+        <div><span>{{ t('tax_total') }}</span><strong><span>{{ currency }}</span><span>{{ tax }}</span></strong></div>
       </div>
     </div>
     <div class="sign">
@@ -133,7 +133,7 @@
     </div>
     {% endif %}
     <div class="pay">
-      <div>{{ t('payable') }}: <strong>{{ total }} {{ currency }}</strong></div>
+      <div>{{ t('payable') }}: <strong><span>{{ currency }}</span><span>{{ total }}</span></strong></div>
       <div class="words">{{ t('words_label') }}: {{ words }}</div>
     </div>
   </div>

@@ -40,7 +40,7 @@ def _party(title: str, rows: list[tuple[str, str]]) -> dict:
     return {"title": title, "rows": rows}
 
 
-def render_invoice_pdf(invoice, customer, issuer, transparency: int = 0) -> bytes:
+def render_invoice_pdf(invoice, customer, issuer, transparency: int = 25) -> bytes:
     locale = invoice.language if invoice.language in ("fa", "en") else "fa"
     money = invoice_money(invoice)
     lines = []
@@ -160,7 +160,7 @@ def normalize_transparency(value) -> int:
         level = int(str(value).strip().rstrip("%"))
     except (TypeError, ValueError):
         return 0
-    return level if level in (0, 25, 50, 75, 100) else 0
+    return level if level in (0, 25, 50, 75, 100) else 25
 
 
 def accent_style(value: str, transparency: int = 0) -> dict:
@@ -168,9 +168,9 @@ def accent_style(value: str, transparency: int = 0) -> dict:
     level = normalize_transparency(transparency)
     red, green, blue = int(color[1:3], 16), int(color[3:5], 16), int(color[5:7], 16)
     alpha = (100 - level) / 100
-    ink = "#0f172a" if level > 25 else "#ffffff"
-    text = "#0f172a" if level > 25 else color
-    border = "#64748b" if level > 25 else color
+    ink = "#0f172a" if level >= 25 else "#ffffff"
+    text = "#0f172a" if level >= 25 else color
+    border = "#64748b" if level >= 25 else color
     return {
         "accent": color,
         "accent_fill": f"rgba({red}, {green}, {blue}, {alpha})",
@@ -178,7 +178,7 @@ def accent_style(value: str, transparency: int = 0) -> dict:
         "accent_text": text,
         "accent_border": border,
         "accent_soft": f"rgba({red}, {green}, {blue}, {0.06 * alpha})",
-        "accent_line": border if level > 25 else f"rgba({red}, {green}, {blue}, 0.2)",
+        "accent_line": border if level >= 25 else f"rgba({red}, {green}, {blue}, 0.2)",
     }
 
 
