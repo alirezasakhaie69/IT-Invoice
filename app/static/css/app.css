@@ -280,3 +280,21 @@ code { color: #93c5fd; }
 @media (max-width: 640px) {
   .tiles { grid-template-columns: 1fr; }
 }
+.invoice-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+.invoice-filters .input {
+  width: auto;
+  min-width: 9rem;
+  padding: 0.4rem 0.65rem;
+  color-scheme: dark;
+  background: #0f172a;
+  color: #f1f5f9;
+  border-color: #475569;
+}
+.invoice-filters input[type="search"] { min-width: 14rem; flex: 1; }
+.invoice-filters option { background: #1e293b; color: #f1f5f9; }

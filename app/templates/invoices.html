@@ -30,38 +30,38 @@
 </div>
 {% endif %}
 <div class="card table-wrap">
-  <form method="get" action="/invoices">
+  <form method="get" action="/invoices" class="invoice-filters">
     {% if customer_id %}
     <input type="hidden" name="customer" value="{{ customer_id }}">
     {% endif %}
-    <input type="search" name="q" value="{{ filters.q }}">
-    <select name="doc_type">
+    <input class="input" type="search" name="q" value="{{ filters.q }}" placeholder="{{ t('search_customer') }}">
+    <select class="input" name="doc_type">
       <option value="" {% if not filters.doc_type %}selected{% endif %}>{{ t('doc_type') }}</option>
       <option value="invoice" {% if filters.doc_type == 'invoice' %}selected{% endif %}>{{ t('invoice') }}</option>
       <option value="proforma" {% if filters.doc_type == 'proforma' %}selected{% endif %}>{{ t('proforma') }}</option>
     </select>
-    <select name="delivery">
+    <select class="input" name="delivery">
       <option value="" {% if not filters.delivery %}selected{% endif %}>{{ t('delivery') }}</option>
       <option value="sent" {% if filters.delivery == 'sent' %}selected{% endif %}>{{ t('sent') }}</option>
       <option value="not_sent" {% if filters.delivery == 'not_sent' %}selected{% endif %}>{{ t('not_sent') }}</option>
     </select>
-    <select name="pay">
+    <select class="input" name="pay">
       <option value="" {% if not filters.pay %}selected{% endif %}>{{ t('paid') }} / {{ t('unpaid') }}</option>
       <option value="paid" {% if filters.pay == 'paid' %}selected{% endif %}>{{ t('paid') }}</option>
       <option value="partial" {% if filters.pay == 'partial' %}selected{% endif %}>{{ t('partial') }}</option>
       <option value="unpaid" {% if filters.pay == 'unpaid' %}selected{% endif %}>{{ t('unpaid') }}</option>
     </select>
-    <select name="sort">
+    <select class="input" name="sort">
       <option value="date_desc" {% if filters.sort == 'date_desc' %}selected{% endif %}>{{ t('sort_date_desc') }}</option>
       <option value="date_asc" {% if filters.sort == 'date_asc' %}selected{% endif %}>{{ t('sort_date_asc') }}</option>
       <option value="number_asc" {% if filters.sort == 'number_asc' %}selected{% endif %}>{{ t('sort_number_asc') }}</option>
       <option value="number_desc" {% if filters.sort == 'number_desc' %}selected{% endif %}>{{ t('sort_number_desc') }}</option>
     </select>
-    <button type="submit">{{ t('apply') }}</button>
+    <button class="btn btn-primary btn-small" type="submit">{{ t('apply') }}</button>
     {% if customer_id %}
-    <a href="/invoices?customer={{ customer_id }}">{{ t('clear_filters') }}</a>
+    <a class="btn btn-secondary btn-small" href="/invoices?customer={{ customer_id }}">{{ t('clear_filters') }}</a>
     {% else %}
-    <a href="/invoices">{{ t('clear_filters') }}</a>
+    <a class="btn btn-secondary btn-small" href="/invoices">{{ t('clear_filters') }}</a>
     {% endif %}
   </form>
   {% if rows %}
