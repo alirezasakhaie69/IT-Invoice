@@ -280,21 +280,35 @@ code { color: #93c5fd; }
 @media (max-width: 640px) {
   .tiles { grid-template-columns: 1fr; }
 }
-.invoice-filters {
+form.invoice-filters {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
+  gap: 0.4rem;
   margin-bottom: 0.85rem;
 }
-.invoice-filters .input {
+form.invoice-filters .input {
   width: auto;
-  min-width: 9rem;
-  padding: 0.4rem 0.65rem;
+  flex: 0 1 auto;
+  min-width: 0;
+  height: 2rem;
+  padding: 0.2rem 0.55rem;
   color-scheme: dark;
   background: #0f172a;
   color: #f1f5f9;
-  border-color: #475569;
+  border: 1px solid #475569;
+  border-radius: 0.5rem;
 }
-.invoice-filters input[type="search"] { min-width: 14rem; flex: 1; }
-.invoice-filters option { background: #1e293b; color: #f1f5f9; }
+form.invoice-filters input[type="search"] {
+  width: 11rem;
+  flex: 0 0 11rem;
+}
+form.invoice-filters select.input {
+  width: 9.5rem;
+  flex: 0 0 9.5rem;
+}
+form.invoice-filters option {
+  background: #1e293b;
+  color: #f1f5f9;
+}
