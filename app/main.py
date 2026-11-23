@@ -458,18 +458,61 @@ def preview(request: Request):
 
 
 @app.get("/invoices")
-def invoice_list(request: Request, customer: int = 0):
+def invoice_list(
+    request: Request,
+    customer: int = 0,
+    q: str = "",
+    doc_type: str = "",
+    delivery: str = "",
+    pay: str = "",
+    sort: str = "date_desc",
+):
+    q = q.strip()
+    if doc_type not in ("", "invoice", "proforma"):
+        doc_type = ""
+    if delivery not in ("", "sent", "not_sent"):
+        delivery = ""
+    if pay not in ("", "paid", "partial", "unpaid"):
+        pay = ""
+    if sort not in ("date_asc", "date_desc", "number_asc", "number_desc"):
+        sort = "date_desc"
     with session() as db:
         stmt = (
             select(Invoice)
             .options(selectinload(Invoice.lines), selectinload(Invoice.payments), selectinload(Invoice.customer))
-            .order_by(Invoice.id.desc())
         )
         if customer:
             stmt = stmt.where(Invoice.customer_id == customer)
+        if doc_type:
+            stmt = stmt.where(Invoice.doc_type == doc_type)
+        if delivery:
+            stmt = stmt.where(Invoice.delivery == delivery)
         invoices = db.scalars(stmt).unique().all()
-        person = db.get(Customer, customer) if customer else None
         rows = [present(invoice) for invoice in invoices]
+        if pay:
+            rows = [row for row in rows if row["pay_status"] == pay]
+        if q:
+            needle = q.casefold()
+
+            def matches(row) -> bool:
+                invoice = row["invoice"]
+                customer_name = invoice.customer.name if invoice.customer else ""
+                parts = (
+                    invoice.number,
+                    invoice.proforma_number or "",
+                    customer_name,
+                    invoice.brief_note,
+                    invoice.notes,
+                )
+                return any(needle in (part or "").casefold() for part in parts)
+
+            rows = [row for row in rows if matches(row)]
+        reverse = sort.endswith("_desc")
+        if sort.startswith("date"):
+            rows.sort(key=lambda row: (row["invoice"].issue_date, row["invoice"].id), reverse=reverse)
+        else:
+            rows.sort(key=lambda row: (row["invoice"].number.casefold(), row["invoice"].id), reverse=reverse)
+        person = db.get(Customer, customer) if customer else None
         buckets = {}
         if person is not None:
             _summary_rows, buckets = book_rows(db, date.min, date.max, person.id)
@@ -480,8 +523,14 @@ def invoice_list(request: Request, customer: int = 0):
             buckets=buckets,
             customer_name=person.name if person else "",
             customer_id=customer,
+            filters={
+                "q": q,
+                "doc_type": doc_type,
+                "delivery": delivery,
+                "pay": pay,
+                "sort": sort,
+            },
         )
-
 
 def form_page(request, customers, invoice, values, lines, errors):
     return html(
