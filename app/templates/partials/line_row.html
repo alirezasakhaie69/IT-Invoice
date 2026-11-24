@@ -1,9 +1,19 @@
 <div class="line-row">
-  <div><label>{{ t('description') }}</label><textarea class="input line-text" name="description" rows="3" maxlength="2000">{{ line.description }}</textarea></div>
-  <div><label>{{ t('quantity') }}</label><input class="input grouped" name="quantity" inputmode="numeric" value="{{ line.quantity }}"></div>
-  <div><label>{{ t('unit') }}</label><input class="input" name="unit" value="{{ line.unit }}"></div>
-  <div><label>{{ t('unit_price') }}</label><input class="input grouped" name="unit_price" inputmode="numeric" value="{{ line.unit_price }}"></div>
-  <div><label>{{ t('discount') }}</label><input class="input grouped" name="discount" inputmode="numeric" value="{{ line.discount }}"></div>
-  <div><label>{{ t('tax_percent') }}</label><input class="input grouped" name="tax_percent" inputmode="numeric" value="{{ line.tax_percent }}"></div>
-  <button class="btn btn-danger btn-small" type="button" onclick="this.closest('.line-row').remove()">{{ t('remove') }}</button>
+  <label class="line-pick"><input type="checkbox" class="line-check"> <span class="line-no"></span></label>
+  <textarea class="input" name="description" rows="2" maxlength="2000" placeholder="{{ t('description') }}">{{ line.description }}</textarea>
+  <input class="input grouped" name="quantity" inputmode="numeric" placeholder="{{ t('quantity') }}" value="{{ line.quantity }}">
+  <input class="input" name="unit" maxlength="40" placeholder="{{ t('unit') }}" value="{{ line.unit }}">
+  <div>
+    <input class="input grouped" name="unit_price" inputmode="numeric" placeholder="{{ t('unit_price') }}" value="{{ line.unit_price }}">
+    <p class="hint applied-note"></p>
+  </div>
+  <input class="input grouped" name="discount" inputmode="numeric" placeholder="{{ t('discount') }}" value="{{ line.discount }}">
+  <input class="input grouped" name="tax_percent" inputmode="numeric" placeholder="{{ t('tax_percent') }}" value="{{ line.tax_percent }}">
+  <div class="line-actions">
+    <button class="btn btn-ghost btn-small" type="button" data-move="-1">{{ t('move_up') }}</button>
+    <button class="btn btn-ghost btn-small" type="button" data-move="1">{{ t('move_down') }}</button>
+    <input class="input line-jump" inputmode="numeric" placeholder="{{ t('row_pos') }}">
+    <button class="btn btn-ghost btn-small" type="button" data-jump>{{ t('jump') }}</button>
+    <button class="btn btn-ghost btn-small" type="button" onclick="this.closest('.line-row').remove()">{{ t('remove') }}</button>
+  </div>
 </div>
