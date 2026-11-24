@@ -131,7 +131,11 @@ function setupCustomerCombos(root) {
 }
 
 document.addEventListener("DOMContentLoaded", () => setupCustomerCombos(document));
-
+document.addEventListener("input", (event) => {
+  if (event.target instanceof HTMLTextAreaElement && event.target.classList.contains("line-text")) {
+    fitLineText(event.target);
+  }
+});
 const persianDigits = "۰۱۲۳۴۵۶۷۸۹";
 const arabicDigits = "٠١٢٣٤٥٦٧٨٩";
 
@@ -190,6 +194,15 @@ function refreshLineNumbers() {
     const number = row.querySelector(".line-no");
     if (number) number.textContent = String(index + 1);
   });
+  fitAllLineText();
+}
+function fitLineText(el) {
+  el.style.height = "2.45rem";
+  if (el.scrollHeight > el.clientHeight + 1) el.style.height = el.scrollHeight + "px";
+}
+
+function fitAllLineText() {
+  document.querySelectorAll("#lines textarea.line-text").forEach(fitLineText);
 }
 
 function moveRow(row, toIndex) {
