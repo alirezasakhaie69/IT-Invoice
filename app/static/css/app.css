@@ -201,6 +201,7 @@ textarea.input.line-text { min-height: 2.45rem; height: 2.45rem; line-height: 1.
 table.data { width: 100%; border-collapse: collapse; }
 table.data th, table.data td { padding: 0.55rem 0.45rem; border-bottom: 1px solid var(--border); text-align: start; vertical-align: top; }
 table.data th { color: var(--muted); font-size: 0.75rem; font-weight: 600; }
+table.data tbody tr:hover td { background: rgba(148, 163, 184, 0.16); }
 .note-clip { max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .line-tools { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: end; margin-bottom: 0.6rem; }
 .line-percent { display: grid; gap: 0.2rem; font-size: 0.75rem; color: #94a3b8; }
