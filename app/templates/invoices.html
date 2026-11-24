@@ -2,8 +2,13 @@
 {% from "partials/badges.html" import badge %}
 {% block body %}
 <div class="page-head">
-  <h1>{{ t('invoices') }}{% if customer_name %} — {{ customer_name }}{% endif %}</h1>
+  <h1>{% if show_archived %}{{ t('archived_invoices') }}{% else %}{{ t('invoices') }}{% endif %}{% if customer_name %} — {{ customer_name }}{% endif %}</h1>
   <a class="btn btn-primary" href="/invoices/new">{{ t('new_invoice') }}</a>
+  {% if show_archived %}
+  <a class="btn btn-ghost" href="/invoices">{{ t('active_invoices') }}</a>
+  {% else %}
+  <a class="btn btn-ghost" href="/invoices?archived=1">{{ t('archived_invoices') }}</a>
+  {% endif %}
 </div>
 {% if customer_name %}
 <p class="hint"><a href="/invoices">{{ t('all_invoices') }}</a> · <a href="/summary">{{ t('summary') }}</a></p>
@@ -34,6 +39,7 @@
     {% if customer_id %}
     <input type="hidden" name="customer" value="{{ customer_id }}">
     {% endif %}
+    {% if show_archived %}<input type="hidden" name="archived" value="1">{% endif %}
     <input class="input" type="search" name="q" value="{{ filters.q }}" placeholder="{{ t('search_customer') }}">
     <select class="input" name="doc_type">
       <option value="" {% if not filters.doc_type %}selected{% endif %}>{{ t('doc_type') }}</option>
@@ -93,6 +99,17 @@
         <td class="note-clip" title="{{ invoice.brief_note }}">{{ invoice.brief_note or t('dash') }}</td>
         <td class="row-actions">
           <a class="btn btn-tint btn-small" href="/invoices/{{ invoice.id }}">{{ t('open') }}</a>
+          {% if show_archived %}
+          <form method="post" action="/invoices/{{ invoice.id }}/unarchive" onsubmit="return confirm(this.dataset.confirm)" data-confirm="{{ t('confirm_unarchive_invoice') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <button class="btn btn-archive btn-small" type="submit">{{ t('unarchive') }}</button>
+          </form>
+          {% else %}
+          <form method="post" action="/invoices/{{ invoice.id }}/archive" onsubmit="return confirm(this.dataset.confirm)" data-confirm="{{ t('confirm_archive_invoice') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <button class="btn btn-archive btn-small" type="submit">{{ t('archive') }}</button>
+          </form>
+          {% endif %}
           <form method="post" action="/invoices/{{ invoice.id }}/delete" onsubmit="return confirm(this.dataset.confirm)" data-confirm="{{ t('confirm_delete_invoice') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf }}">
             <button class="btn btn-danger btn-small" type="submit">{{ t('delete') }}</button>

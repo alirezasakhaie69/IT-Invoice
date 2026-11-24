@@ -133,6 +133,8 @@ h2 { font-size: 0.95rem; margin: 0 0 0.75rem; }
 .btn-secondary:hover { background: #475569; color: #e2e8f0; text-decoration: none; }
 .btn-danger { color: #f87171; background: rgba(127, 29, 29, 0.2); }
 .btn-danger:hover { background: rgba(127, 29, 29, 0.35); color: #f87171; }
+.btn-archive { color: #fde68a; background: rgba(234, 179, 8, 0.16); border-color: #eab308; }
+.btn-archive:hover { background: rgba(234, 179, 8, 0.32); color: #fef3c7; }
 .btn-ghost { color: #94a3b8; background: transparent; }
 .btn-ghost:hover { background: #334155; color: #e2e8f0; text-decoration: none; }
 .btn-tint {

@@ -172,7 +172,7 @@ def convert_proforma(db, invoice: Invoice) -> None:
 def book_rows(db, start: date, end: date, customer_id: int | None = None) -> tuple[list[dict], dict]:
     stmt = (
         select(Invoice)
-        .where(Invoice.doc_type == "invoice", Invoice.issue_date >= start, Invoice.issue_date <= end)
+        .where(Invoice.doc_type == "invoice", Invoice.archived.is_(False), Invoice.issue_date >= start, Invoice.issue_date <= end)
         .options(selectinload(Invoice.lines), selectinload(Invoice.payments), selectinload(Invoice.customer))
         .order_by(Invoice.issue_date, Invoice.number)
     )

@@ -85,11 +85,21 @@ TEMPLATES = Environment(
     loader=FileSystemLoader("app/templates"),
     autoescape=select_autoescape(["html"]),
 )
+def ensure_archived_column() -> None:
+    from sqlalchemy import inspect, text
+    from app.db import get_engine
+
+    engine = get_engine()
+    names = {column["name"] for column in inspect(engine).get_columns("invoices")}
+    if "archived" not in names:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE invoices ADD COLUMN archived BOOLEAN NOT NULL DEFAULT 0"))
+
 FLASH = {
     "saved", "deleted", "send_ok", "send_failed", "no_channel", "send_in_progress",
     "drive_ok", "drive_failed", "drive_started", "test_ok", "test_failed", "connected_msg", "converted",
     "customer_in_use", "cannot_delete_self", "cannot_delete_last_admin", "username_taken",
-    "date_invalid", "contract_exists", "term_invalid", "term_active", "term_locked",
+    "date_invalid", "contract_exists", "term_invalid", "term_active", "term_locked", "invoice_archived", "invoice_restored",
 }
 ERRORS = {
     "send_failed", "no_channel", "send_in_progress", "drive_failed", "test_failed",
@@ -292,6 +302,7 @@ async def lifespan(_app):
     if not app_secret():
         raise SystemExit("APP_SECRET_KEY must be set.")
     data_dir()
+    ensure_archived_column()
     with session() as db:
         seed_admin(db)
         db.execute(update(Invoice).values(sending=False))
@@ -487,6 +498,8 @@ def invoice_list(
             stmt = stmt.where(Invoice.doc_type == doc_type)
         if delivery:
             stmt = stmt.where(Invoice.delivery == delivery)
+        show_archived = request.query_params.get("archived") == "1"
+        stmt = stmt.where(Invoice.archived.is_(show_archived))
         invoices = db.scalars(stmt).unique().all()
         rows = [present(invoice) for invoice in invoices]
         if pay:
@@ -520,6 +533,7 @@ def invoice_list(
             request,
             "invoices.html",
             rows=rows,
+            show_archived=show_archived,
             buckets=buckets,
             customer_name=person.name if person else "",
             customer_id=customer,
@@ -766,6 +780,27 @@ def delete_invoice(request: Request, invoice_id: int):
     if path.is_file():
         path.unlink()
     return redirect("/invoices?m=deleted")
+
+@app.post("/invoices/{invoice_id}/archive")
+def archive_invoice(request: Request, invoice_id: int):
+    with session() as db:
+        invoice = db.get(Invoice, invoice_id)
+        if invoice is None:
+            return html(request, "missing.html", status_code=404)
+        invoice.archived = True
+        db.commit()
+    return redirect("/invoices?m=invoice_archived")
+
+
+@app.post("/invoices/{invoice_id}/unarchive")
+def unarchive_invoice(request: Request, invoice_id: int):
+    with session() as db:
+        invoice = db.get(Invoice, invoice_id)
+        if invoice is None:
+            return html(request, "missing.html", status_code=404)
+        invoice.archived = False
+        db.commit()
+    return redirect("/invoices?archived=1&m=invoice_restored")
 
 
 @app.post("/invoices/{invoice_id}/clone")

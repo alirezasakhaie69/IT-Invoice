@@ -92,6 +92,8 @@ class Invoice(Base):
     drive_error: Mapped[str] = mapped_column(Text, nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    archived: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
 
     customer: Mapped[Customer] = relationship()
     lines: Mapped[list["InvoiceLine"]] = relationship(
