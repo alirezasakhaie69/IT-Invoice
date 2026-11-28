@@ -28,6 +28,14 @@
         <label>{{ t('telegram_token') }} — {{ t('configured') if drive.has_telegram_token else t('not_configured') }}</label>
         <input class="input" name="telegram_bot_token" type="password" autocomplete="off" placeholder="{{ t('leave_secret') }}">
       </div>
+      <div class="field">
+        <label>Admin Bale ID</label>
+        <input type="text" name="admin_bale_id" value="{{ admin_bale_id or '' }}">
+      </div>
+      <div class="field">
+        <label>Admin Telegram ID</label>
+        <input type="text" name="admin_telegram_id" value="{{ admin_telegram_id or '' }}">
+      </div>      
     </div>
   </div>
   <div class="card">

@@ -236,3 +236,41 @@ def send_invoice(db, invoice: Invoice, customer, issuer) -> str:
     finally:
         db.execute(update(Invoice).where(Invoice.id == invoice.id).values(sending=False))
         db.commit()
+
+def send_debt_to_admin(text_en: str, text_fa: str, drive) -> tuple[str, str]:
+    """Send bilingual debt message to admin via Bale and/or Telegram.
+    Returns (status, message) where status is 'sent', 'partial', or 'failed'."""
+    from .config import bale_base, telegram_base
+    import json, urllib.request, urllib.error
+
+    admin_bale = drive.get("admin_bale_id")
+    admin_tele = drive.get("admin_telegram_id")
+    bale_token = channel_token("bale", drive)
+    tele_token = channel_token("telegram", drive)
+
+    if not admin_bale and not admin_tele:
+        return "failed", "debt_no_admin_channel"
+
+    results = []
+    for platform, chat_id, token, base in [
+        ("bale", admin_bale, bale_token, bale_base()),
+        ("telegram", admin_tele, tele_token, telegram_base()),
+    ]:
+        if not chat_id or not token:
+            continue
+        text = text_en if platform == "telegram" else text_fa   # or always send both languages
+        url = f"{base}/bot{token}/sendMessage"
+        data = json.dumps({"chat_id": chat_id, "text": text}).encode()
+        req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=10) as r:
+                ok = 200 <= r.status < 300
+            results.append(ok)
+        except Exception:
+            results.append(False)
+
+    if all(results):
+        return "sent", "debt_sent"
+    if any(results):
+        return "partial", "debt_partial_fail"
+    return "failed", "debt_failed"

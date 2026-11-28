@@ -61,3 +61,34 @@ def statement_rows(start: date, duration: int, monthly_amount: int, payments: di
             "due": (year, month) == focus,
         })
     return rows
+
+def build_debt_message(customer_name: str, invoices: list, contracts: list, locale="fa"):
+    from app.format import format_number, localize_digits
+    from app.i18n import translate as t
+
+    lines_en = [t("en", "debt_of").format(name=customer_name)]
+    lines_fa = [t("fa", "debt_of").format(name=customer_name)]
+
+    total = 0
+    for inv in invoices:
+        if inv.outstanding > 0:
+            amt = format_number(inv.outstanding, "en")
+            lines_en.append(f"{t('en','invoice_no')} {inv.number}: {amt} Toman")
+            amt_fa = localize_digits(format_number(inv.outstanding, "fa"))
+            lines_fa.append(f"{t('fa','invoice_no')} {inv.number}: {amt_fa} تومان")
+            total += inv.outstanding
+
+    for c in contracts:
+        bal = c.balance   # from contract_balance()
+        if bal > 0:
+            lines_en.append(f"{t('en','contract_word')} {c.name}: {format_number(bal,'en')} Toman")
+            lines_fa.append(f"{t('fa','contract_word')} {c.name}: {localize_digits(format_number(bal,'fa'))} تومان")
+            total += bal
+
+    if total == 0:
+        return None, None
+
+    lines_en.append(f"{t('en','debt_total')}: {format_number(total,'en')} Toman")
+    lines_fa.append(f"{t('fa','debt_total')}: {localize_digits(format_number(total,'fa'))} تومان")
+
+    return "\n".join(lines_en), "\n".join(lines_fa)
