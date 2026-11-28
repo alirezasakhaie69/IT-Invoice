@@ -78,6 +78,9 @@ def public_view(data: dict) -> dict:
         "has_telegram_token": bool(data.get("telegram_bot_token")),
         "redirect_uri": redirect_uri(),
         "last_test": data.get("last_test") or "",
+        view["admin_bale_id"] = data.get("admin_bale_id") or ""
+        view["admin_telegram_id"] = data.get("admin_telegram_id") or ""
+
     }
 
 
@@ -89,6 +92,10 @@ def apply_form(current: dict, form) -> dict:
     data["auto_save_on_send"] = form.get("auto_save") == "on"
     data["folder_id"] = (form.get("folder_id") or "").strip()[:128]
     data["shared_drive_id"] = ""
+    for key in ("admin_bale_id", "admin_telegram_id"):
+    value = (form.get(key) or "").strip()
+    if value:
+        data[key] = value
     client_id = (form.get("oauth_client_id") or "").strip()
     if client_id and client_id != data.get("oauth_client_id"):
         data["oauth_client_id"] = client_id
