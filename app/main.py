@@ -1418,6 +1418,45 @@ def summary_csv(request: Request, start: str = "", end: str = ""):
     return Response(payload, media_type="text/csv; charset=utf-8", headers={"Content-Disposition": "attachment; filename=summary.csv"})
 
 
+# اضافه شده توسط شما
+@app.get("/send-debt/{customer_id}")
+def send_debt_to_admin(request: Request, customer_id: int):
+    locale = request.state.user.locale
+    with session() as db:
+        customer = db.get(Customer, customer_id)
+        if not customer:
+            return html(request, "error.html", message="مشتری یافت نشد")
+        # جمع‌آوری بدهی (outstanding) از فاکتورهای مشتری
+        rows = db.query(Invoice).filter(Invoice.customer_id == customer_id).all()
+        # ساخت پیام (دقیقاً همان فرمت مثال)
+        message = f"{translate(locale, 'debt_of')}: {customer.name}\n\n"
+        total = 0
+        for inv in rows:
+            if inv.outstanding > 0:
+                message += f"{translate(locale, 'invoice_no')} {inv.number}: {format_number(inv.outstanding, locale)}\n"
+                total += inv.outstanding
+        message += f"\n{translate(locale, 'total')}: {format_number(total, locale)}"
+        # ارسال (هر دو کانال)
+        sent = 0
+        failed = 0
+        if customer.admin_bale_id:
+            ok, _ = send_message_to_bale(customer.admin_bale_id, message)
+            if ok:
+                sent += 1
+            else:
+                failed += 1
+        if customer.admin_telegram_id:
+            ok, _ = send_message_to_telegram(customer.admin_telegram_id, message)
+            if ok:
+                sent += 1
+            else:
+                failed += 1
+        if sent > 0:
+            return html(request, "success.html", message=translate(locale, 'debt_sent'))
+        else:
+            return html(request, "error.html", message=translate(locale, 'debt_failed'))
+
+
 def _csv_text(value: str) -> str:
     if value[:1] in ("=", "+", "@"):
         return "'" + value

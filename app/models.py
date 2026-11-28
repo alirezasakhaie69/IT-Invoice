@@ -204,5 +204,5 @@ class DriveSetting(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     ciphertext: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    admin_bale_id: Mapped[str] = mapped_column(String(64), nullable=True)
-    admin_telegram_id: Mapped[str] = mapped_column(String(64), nullable=True)
+    admin_bale_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    admin_telegram_id: Mapped[str | None] = mapped_column(String(64), nullable=True)

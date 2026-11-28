@@ -28,14 +28,6 @@
         <label>{{ t('telegram_token') }} — {{ t('configured') if drive.has_telegram_token else t('not_configured') }}</label>
         <input class="input" name="telegram_bot_token" type="password" autocomplete="off" placeholder="{{ t('leave_secret') }}">
       </div>
-      <div class="field">
-        <label>Admin Bale ID</label>
-        <input type="text" name="admin_bale_id" value="{{ admin_bale_id or '' }}">
-      </div>
-      <div class="field">
-        <label>Admin Telegram ID</label>
-        <input type="text" name="admin_telegram_id" value="{{ admin_telegram_id or '' }}">
-      </div>      
     </div>
   </div>
   <div class="card">
@@ -74,6 +66,17 @@
       </div>
     </div>
     <label><input type="checkbox" name="auto_save" {% if drive.auto_save_on_send %}checked{% endif %}> {{ t('auto_save') }}</label>
+  </div>
+  <div class="card">
+    <h2>{{ t('admin_messenger') }}</h2>
+    <div class="form-group">
+      <label>{{ t('admin_bale_id') }}</label>
+      <input class="input" name="admin_bale_id" value="{{ drive.admin_bale_id or '' }}">
+    </div>
+    <div class="form-group">
+      <label>{{ t('admin_telegram_id') }}</label>
+      <input class="input" name="admin_telegram_id" value="{{ drive.admin_telegram_id or '' }}">
+    </div>
   </div>
   <div class="actions">
     <button class="btn btn-primary" name="action" value="save" type="submit">{{ t('save') }}</button>
