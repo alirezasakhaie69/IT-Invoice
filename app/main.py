@@ -1431,6 +1431,8 @@ def send_debt_to_admin(request: Request, customer_id: int):
         drive = load_drive(db)
         lines = [f"{translate(locale, 'debt_of')} {customer.name}"]
         total = 0
+
+        # فاکتورها
         invoices = db.scalars(
             select(Invoice).where(
                 Invoice.customer_id == customer.id,
@@ -1444,6 +1446,8 @@ def send_debt_to_admin(request: Request, customer_id: int):
                 continue
             total += due
             lines.append(f"{translate(locale, 'invoice_no')} {inv.number}: {format_number(due, locale)}")
+
+        # قراردادها
         contracts = db.scalars(select(Contract).where(Contract.customer_id == customer.id)).all()
         for contract in contracts:
             term = next((item for item in reversed(contract.terms) if item.status == "active"), None)
@@ -1457,12 +1461,24 @@ def send_debt_to_admin(request: Request, customer_id: int):
             if remain <= 0:
                 continue
             total += remain
-            lines.append(f"{translate(locale, 'contract_word')}: {format_number(remain, locale)}")
+
+            if term.start_date:
+                jalali_month = term.start_date.strftime("%B")
+                contract_line = f"{translate(locale, 'contract_word')} ({jalali_month}): {format_number(remain, locale)}"
+            else:
+                contract_line = f"{translate(locale, 'contract_word')}: {format_number(remain, locale)}"
+
+            lines.append(contract_line)
 
         if total <= 0:
             return redirect(f"/invoices?customer={customer.id}&m=debt_none")
+
+        # === جداکننده قبل از جمع ===
+        lines.append("---------------------------")
         lines.append(f"{translate(locale, 'total')}: {format_number(total, locale)} {translate(locale, 'toman')}")
+
         text = "\n".join(lines)
+
         sent = False
         for channel, key in (("bale", "admin_bale_id"), ("telegram", "admin_telegram_id")):
             chat_id = (drive.get(key) or "").strip()
@@ -1473,7 +1489,9 @@ def send_debt_to_admin(request: Request, customer_id: int):
                 sent = True
             else:
                 log.info("admin debt send failed on %s: %s", channel, error)
+
         return redirect(f"/invoices?customer={customer.id}&m={'send_ok' if sent else 'send_failed'}")
+
 
 
 def _csv_text(value: str) -> str:
