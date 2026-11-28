@@ -34,15 +34,7 @@
   {% endif %}
   {% if customer_id %}
   <div style="margin-top:14px;text-align:end">
-    <a href="/send-debt/{{ customer_id }}"
-      class="btn btn-tint"
-      style="background: transparent; 
-          border: 1px solid #0ea5e9; 
-          font-size: 0.6em; 
-          text-decoration: none !important;">
-    {{ translate(locale, 'send_debt_to_admin') }}
-    </a>
-
+    <a class="btn" href="/send-debt/{{ customer_id }}" style="background:transparent;border:1px solid #14b8a6;color:#5eead4;text-decoration:none;padding:0.28rem 0.55rem;">{{ t('send_debt_to_admin') }}</a>
   </div>
   {% endif %}
 </div>
