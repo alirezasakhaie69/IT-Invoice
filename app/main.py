@@ -1446,13 +1446,19 @@ def send_debt_to_admin(request: Request, customer_id: int):
             lines.append(f"{translate(locale, 'invoice_no')} {inv.number}: {format_number(due, locale)}")
         contracts = db.scalars(select(Contract).where(Contract.customer_id == customer.id)).all()
         for contract in contracts:
+            term = next((item for item in reversed(contract.terms) if item.status == "active"), None)
+            if term is None:
+                continue
             _gross, _paid, remain = contract_balance(
-                contract.monthly_amount, contract.duration, contract.paid_amounts
+                term.monthly_amount,
+                term.duration,
+                [payment.amount for payment in term.payments],
             )
             if remain <= 0:
                 continue
             total += remain
-            lines.append(f"{translate(locale, 'contract_word')} {contract.title}: {format_number(remain, locale)}")
+            lines.append(f"{translate(locale, 'contract_word')}: {format_number(remain, locale)}")
+
         if total <= 0:
             return redirect(f"/invoices?customer={customer.id}&m=debt_none")
         lines.append(f"{translate(locale, 'total')}: {format_number(total, locale)} {translate(locale, 'toman')}")
