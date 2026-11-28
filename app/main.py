@@ -1445,7 +1445,7 @@ def send_debt_to_admin(request: Request, customer_id: int):
                 continue
             total += due
             lines.append(f"{translate(locale, 'invoice_no')} {inv.number}: {format_number(due, locale)}")
-                today = date.today()
+        today = date.today()
         contracts = db.scalars(select(Contract).where(Contract.customer_id == customer.id)).all()
         for contract in contracts:
             term = next((item for item in reversed(contract.terms) if item.status == "active"), None)
@@ -1459,16 +1459,6 @@ def send_debt_to_admin(request: Request, customer_id: int):
             remain = term.monthly_amount
             total += remain
             year, month = target
-            lines.append(
-                f"{translate(locale, 'contract_word')} ({month_label(year, month, locale)}): {format_number(remain, locale)}"
-            )
-            if remain <= 0:
-                continue
-            total += remain
-            if locale == "fa":
-                year, month, _day = to_jalali(term.start_date)
-            else:
-                year, month = term.start_date.year, term.start_date.month
             lines.append(
                 f"{translate(locale, 'contract_word')} ({month_label(year, month, locale)}): {format_number(remain, locale)}"
             )
@@ -1488,6 +1478,7 @@ def send_debt_to_admin(request: Request, customer_id: int):
             else:
                 log.info("admin debt send failed on %s: %s", channel, error)
         return redirect(f"/invoices?customer={customer.id}&m={'send_ok' if sent else 'send_failed'}")
+
 
 
 
