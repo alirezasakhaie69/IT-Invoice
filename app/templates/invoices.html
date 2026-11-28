@@ -2,8 +2,13 @@
 {% from "partials/badges.html" import badge %}
 {% block body %}
 <div class="page-head">
-  <h1>{{ t('invoices') }}{% if customer_name %} — {{ customer_name }}{% endif %}</h1>
+  <h1>{% if show_archived %}{{ t('archived_invoices') }}{% else %}{{ t('invoices') }}{% endif %}{% if customer_name %} — {{ customer_name }}{% endif %}</h1>
   <a class="btn btn-primary" href="/invoices/new">{{ t('new_invoice') }}</a>
+  {% if show_archived %}
+  <a class="btn btn-ghost" href="/invoices">{{ t('active_invoices') }}</a>
+  {% else %}
+  <a class="btn btn-ghost" href="/invoices?archived=1">{{ t('archived_invoices') }}</a>
+  {% endif %}
 </div>
 {% if customer_name %}
 <p class="hint"><a href="/invoices">{{ t('all_invoices') }}</a> · <a href="/summary">{{ t('summary') }}</a></p>
@@ -30,6 +35,41 @@
 </div>
 {% endif %}
 <div class="card table-wrap">
+  <form method="get" action="/invoices" class="invoice-filters">
+    {% if customer_id %}
+    <input type="hidden" name="customer" value="{{ customer_id }}">
+    {% endif %}
+    {% if show_archived %}<input type="hidden" name="archived" value="1">{% endif %}
+    <input class="input" type="search" name="q" value="{{ filters.q }}" placeholder="{{ t('search_customer') }}">
+    <select class="input" name="doc_type">
+      <option value="" {% if not filters.doc_type %}selected{% endif %}>{{ t('doc_type') }}</option>
+      <option value="invoice" {% if filters.doc_type == 'invoice' %}selected{% endif %}>{{ t('invoice') }}</option>
+      <option value="proforma" {% if filters.doc_type == 'proforma' %}selected{% endif %}>{{ t('proforma') }}</option>
+    </select>
+    <select class="input" name="delivery">
+      <option value="" {% if not filters.delivery %}selected{% endif %}>{{ t('delivery') }}</option>
+      <option value="sent" {% if filters.delivery == 'sent' %}selected{% endif %}>{{ t('sent') }}</option>
+      <option value="not_sent" {% if filters.delivery == 'not_sent' %}selected{% endif %}>{{ t('not_sent') }}</option>
+    </select>
+    <select class="input" name="pay">
+      <option value="" {% if not filters.pay %}selected{% endif %}>{{ t('paid') }} / {{ t('unpaid') }}</option>
+      <option value="paid" {% if filters.pay == 'paid' %}selected{% endif %}>{{ t('paid') }}</option>
+      <option value="partial" {% if filters.pay == 'partial' %}selected{% endif %}>{{ t('partial') }}</option>
+      <option value="unpaid" {% if filters.pay == 'unpaid' %}selected{% endif %}>{{ t('unpaid') }}</option>
+    </select>
+    <select class="input" name="sort">
+      <option value="date_desc" {% if filters.sort == 'date_desc' %}selected{% endif %}>{{ t('sort_date_desc') }}</option>
+      <option value="date_asc" {% if filters.sort == 'date_asc' %}selected{% endif %}>{{ t('sort_date_asc') }}</option>
+      <option value="number_asc" {% if filters.sort == 'number_asc' %}selected{% endif %}>{{ t('sort_number_asc') }}</option>
+      <option value="number_desc" {% if filters.sort == 'number_desc' %}selected{% endif %}>{{ t('sort_number_desc') }}</option>
+    </select>
+    <button class="btn btn-primary btn-small" type="submit">{{ t('apply') }}</button>
+    {% if customer_id %}
+    <a class="btn btn-secondary btn-small" href="/invoices?customer={{ customer_id }}">{{ t('clear_filters') }}</a>
+    {% else %}
+    <a class="btn btn-secondary btn-small" href="/invoices">{{ t('clear_filters') }}</a>
+    {% endif %}
+  </form>
   {% if rows %}
   <table class="data">
     <thead>
@@ -59,6 +99,17 @@
         <td class="note-clip" title="{{ invoice.brief_note }}">{{ invoice.brief_note or t('dash') }}</td>
         <td class="row-actions">
           <a class="btn btn-tint btn-small" href="/invoices/{{ invoice.id }}">{{ t('open') }}</a>
+          {% if show_archived %}
+          <form method="post" action="/invoices/{{ invoice.id }}/unarchive" onsubmit="return confirm(this.dataset.confirm)" data-confirm="{{ t('confirm_unarchive_invoice') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <button class="btn btn-archive btn-small" type="submit">{{ t('unarchive') }}</button>
+          </form>
+          {% else %}
+          <form method="post" action="/invoices/{{ invoice.id }}/archive" onsubmit="return confirm(this.dataset.confirm)" data-confirm="{{ t('confirm_archive_invoice') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf }}">
+            <button class="btn btn-archive btn-small" type="submit">{{ t('archive') }}</button>
+          </form>
+          {% endif %}
           <form method="post" action="/invoices/{{ invoice.id }}/delete" onsubmit="return confirm(this.dataset.confirm)" data-confirm="{{ t('confirm_delete_invoice') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf }}">
             <button class="btn btn-danger btn-small" type="submit">{{ t('delete') }}</button>
@@ -70,6 +121,7 @@
   </table>
   {% else %}
   <p>{{ t('no_records') }}</p>
+  <p>{{ t('no_invoices') }}</p>
   {% endif %}
 </div>
 {% endblock %}

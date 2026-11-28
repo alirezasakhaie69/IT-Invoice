@@ -113,6 +113,16 @@
     <p class="hint">{{ t('help_invoice_notes') }}</p>
   </div>
   <div class="card">
+    <div class="line-tools">
+      <button class="btn btn-small btn-line-all" type="button" id="lines-all">{{ t('select_all_lines') }}</button>
+      <button class="btn btn-small btn-line-none" type="button" id="lines-none">{{ t('select_no_lines') }}</button>
+      <label class="line-percent">{{ t('adjust_percent') }}
+        <input class="input" id="adjust-percent" inputmode="decimal" placeholder="7 or -3.5">
+      </label>
+      <button class="btn btn-tint btn-small" type="button" id="adjust-apply">{{ t('apply_adjust') }}</button>
+      <button class="btn btn-small btn-line-undo" type="button" id="adjust-undo" disabled>{{ t('undo_adjust') }}</button>
+      <p class="hint" id="adjust-msg"></p>
+    </div>
     <div id="lines">
       {% for line in lines %}
       {% include "partials/line_row.html" %}

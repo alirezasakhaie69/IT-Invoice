@@ -75,7 +75,7 @@ from app.models import (
     SessionRow,
     User,
 )
-from app.pdf import DEFAULT_ACCENT, DEFAULT_TEMPLATE, FORMAL_COLORS, normalize_accent, normalize_template, pdf_filename
+from app.pdf import DEFAULT_ACCENT, DEFAULT_TEMPLATE, FORMAL_COLORS, normalize_accent, normalize_template, pdf_filename, normalize_transparency
 from app.send import pdf_path, send_invoice, write_pdf
 
 log = logging.getLogger("invoice")
@@ -85,11 +85,21 @@ TEMPLATES = Environment(
     loader=FileSystemLoader("app/templates"),
     autoescape=select_autoescape(["html"]),
 )
+def ensure_archived_column() -> None:
+    from sqlalchemy import inspect, text
+    from app.db import get_engine
+
+    engine = get_engine()
+    names = {column["name"] for column in inspect(engine).get_columns("invoices")}
+    if "archived" not in names:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE invoices ADD COLUMN archived BOOLEAN NOT NULL DEFAULT 0"))
+
 FLASH = {
     "saved", "deleted", "send_ok", "send_failed", "no_channel", "send_in_progress",
     "drive_ok", "drive_failed", "drive_started", "test_ok", "test_failed", "connected_msg", "converted",
     "customer_in_use", "cannot_delete_self", "cannot_delete_last_admin", "username_taken",
-    "date_invalid", "contract_exists", "term_invalid", "term_active", "term_locked",
+    "date_invalid", "contract_exists", "term_invalid", "term_active", "term_locked", "invoice_archived", "invoice_restored",
 }
 ERRORS = {
     "send_failed", "no_channel", "send_in_progress", "drive_failed", "test_failed",
@@ -292,6 +302,7 @@ async def lifespan(_app):
     if not app_secret():
         raise SystemExit("APP_SECRET_KEY must be set.")
     data_dir()
+    ensure_archived_column()
     with session() as db:
         seed_admin(db)
         db.execute(update(Invoice).values(sending=False))
@@ -458,18 +469,63 @@ def preview(request: Request):
 
 
 @app.get("/invoices")
-def invoice_list(request: Request, customer: int = 0):
+def invoice_list(
+    request: Request,
+    customer: int = 0,
+    q: str = "",
+    doc_type: str = "",
+    delivery: str = "",
+    pay: str = "",
+    sort: str = "date_desc",
+):
+    q = q.strip()
+    if doc_type not in ("", "invoice", "proforma"):
+        doc_type = ""
+    if delivery not in ("", "sent", "not_sent"):
+        delivery = ""
+    if pay not in ("", "paid", "partial", "unpaid"):
+        pay = ""
+    if sort not in ("date_asc", "date_desc", "number_asc", "number_desc"):
+        sort = "date_desc"
     with session() as db:
         stmt = (
             select(Invoice)
             .options(selectinload(Invoice.lines), selectinload(Invoice.payments), selectinload(Invoice.customer))
-            .order_by(Invoice.id.desc())
         )
         if customer:
             stmt = stmt.where(Invoice.customer_id == customer)
+        if doc_type:
+            stmt = stmt.where(Invoice.doc_type == doc_type)
+        if delivery:
+            stmt = stmt.where(Invoice.delivery == delivery)
+        show_archived = request.query_params.get("archived") == "1"
+        stmt = stmt.where(Invoice.archived.is_(show_archived))
         invoices = db.scalars(stmt).unique().all()
-        person = db.get(Customer, customer) if customer else None
         rows = [present(invoice) for invoice in invoices]
+        if pay:
+            rows = [row for row in rows if row["pay_status"] == pay]
+        if q:
+            needle = q.casefold()
+
+            def matches(row) -> bool:
+                invoice = row["invoice"]
+                customer_name = invoice.customer.name if invoice.customer else ""
+                parts = (
+                    invoice.number,
+                    invoice.proforma_number or "",
+                    customer_name,
+                    invoice.brief_note,
+                    invoice.notes,
+                )
+                return any(needle in (part or "").casefold() for part in parts)
+
+            rows = [row for row in rows if matches(row)]
+        reverse = sort.endswith("_desc")
+        if sort.startswith("date"):
+            rows.sort(key=lambda row: (row["invoice"].issue_date, row["invoice"].id), reverse=reverse)
+        else:
+            rows.sort(key=lambda row: (row["invoice"].number.casefold(), row["invoice"].id), reverse=reverse)
+        person = db.get(Customer, customer) if customer else None
         buckets = {}
         if person is not None:
             _summary_rows, buckets = book_rows(db, date.min, date.max, person.id)
@@ -477,11 +533,18 @@ def invoice_list(request: Request, customer: int = 0):
             request,
             "invoices.html",
             rows=rows,
+            show_archived=show_archived,
             buckets=buckets,
             customer_name=person.name if person else "",
             customer_id=customer,
+            filters={
+                "q": q,
+                "doc_type": doc_type,
+                "delivery": delivery,
+                "pay": pay,
+                "sort": sort,
+            },
         )
-
 
 def form_page(request, customers, invoice, values, lines, errors):
     return html(
@@ -544,19 +607,21 @@ def create_invoice(request: Request):
 
 
 @app.get("/invoices/{invoice_id}")
-def invoice_detail(request: Request, invoice_id: int):
+def invoice_detail(request: Request, invoice_id: int, transparency: int = 25):
     with session() as db:
         invoice = load_invoice(db, invoice_id)
         if invoice is None:
             return html(request, "missing.html", status_code=404)
         view = present(invoice)
         today = date.today().isoformat()
+        level = normalize_transparency(transparency) if invoice.template == "modern" else 0
         return html(
             request,
             "invoice_detail.html",
             view=view,
             today=today,
             drive_pending=drive_is_pending(invoice.drive_error),
+            transparency=level,
         )
 
 
@@ -716,6 +781,27 @@ def delete_invoice(request: Request, invoice_id: int):
         path.unlink()
     return redirect("/invoices?m=deleted")
 
+@app.post("/invoices/{invoice_id}/archive")
+def archive_invoice(request: Request, invoice_id: int):
+    with session() as db:
+        invoice = db.get(Invoice, invoice_id)
+        if invoice is None:
+            return html(request, "missing.html", status_code=404)
+        invoice.archived = True
+        db.commit()
+    return redirect("/invoices?m=invoice_archived")
+
+
+@app.post("/invoices/{invoice_id}/unarchive")
+def unarchive_invoice(request: Request, invoice_id: int):
+    with session() as db:
+        invoice = db.get(Invoice, invoice_id)
+        if invoice is None:
+            return html(request, "missing.html", status_code=404)
+        invoice.archived = False
+        db.commit()
+    return redirect("/invoices?archived=1&m=invoice_restored")
+
 
 @app.post("/invoices/{invoice_id}/clone")
 def clone_route(request: Request, invoice_id: int):
@@ -797,23 +883,25 @@ def delete_payment(request: Request, invoice_id: int, payment_id: int):
 
 
 @app.get("/invoices/{invoice_id}/pdf")
-def download_pdf(request: Request, invoice_id: int):
+def download_pdf(request: Request, invoice_id: int, transparency: int = 25):
     with session() as db:
         invoice = load_invoice(db, invoice_id)
         if invoice is None:
             return html(request, "missing.html", status_code=404)
-        path = write_pdf(invoice, invoice.customer, get_issuer(db))
+        level = normalize_transparency(transparency) if invoice.template == "modern" else 0
+        path = write_pdf(invoice, invoice.customer, get_issuer(db), level)
         filename = pdf_filename(invoice, invoice.customer.name if invoice.customer else "")
     return FileResponse(path, media_type="application/pdf", filename=filename)
 
 
 @app.get("/invoices/{invoice_id}/preview")
-def preview_pdf(request: Request, invoice_id: int):
+def preview_pdf(request: Request, invoice_id: int, transparency: int = 25):
     with session() as db:
         invoice = load_invoice(db, invoice_id)
         if invoice is None:
             return html(request, "missing.html", status_code=404)
-        path = write_pdf(invoice, invoice.customer, get_issuer(db))
+        level = normalize_transparency(transparency) if invoice.template == "modern" else 0
+        path = write_pdf(invoice, invoice.customer, get_issuer(db), level)
         filename = pdf_filename(invoice, invoice.customer.name if invoice.customer else "")
     return FileResponse(path, media_type="application/pdf", filename=filename, content_disposition_type="inline")
 
