@@ -544,6 +544,7 @@ def invoice_list(
                 "pay": pay,
                 "sort": sort,
             },
+            translate=translate,
         )
 
 def form_page(request, customers, invoice, values, lines, errors):
