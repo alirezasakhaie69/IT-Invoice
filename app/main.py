@@ -1443,6 +1443,8 @@ def send_debt_to_admin(request: Request, customer_id: int):
             due = present(inv)["outstanding"]
             if due <= 0:
                 continue
+            if inv.currency == "rial":
+                due //= 10
             total += due
             lines.append(f"{translate(locale, 'invoice_no')} {inv.number}: {format_number(due, locale)}")
         today = date.today()
