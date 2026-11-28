@@ -282,6 +282,8 @@ STRINGS = {
         "invoice_no": "فاکتور شماره",
         "contract_word": "قرارداد",
         "debt_total": "جمع کل",
+        "send_debt_to_admin": "ارسال بدهی به مدیر",
+
 
     },
     "en": {
@@ -567,6 +569,8 @@ STRINGS = {
         "invoice_no": "Invoice No.",
         "contract_word": "Contract",
         "debt_total": "Total",
+        "send_debt_to_admin": "Send debt to admin",
+
     },
 }
 

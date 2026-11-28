@@ -32,6 +32,14 @@
   {% else %}
   <p>{{ t('no_records') }}</p>
   {% endif %}
+  {% if customer_id %}
+  <div style="margin-top:14px;text-align:end">
+    <a class="btn" href="/send-debt/{{ customer_id }}"
+       style="background:transparent;border:1px solid #14b8a6;color:#5eead4">
+      {{ t('send_debt_to_admin') }}
+    </a>
+  </div>
+  {% endif %}
 </div>
 {% endif %}
 <div class="card table-wrap">
@@ -68,9 +76,6 @@
     <a class="btn btn-secondary btn-small" href="/invoices?customer={{ customer_id }}">{{ t('clear_filters') }}</a>
     {% else %}
     <a class="btn btn-secondary btn-small" href="/invoices">{{ t('clear_filters') }}</a>
-    {% endif %}
-    {% if customer_id %}
-    <a class="btn btn-secondary" href="/customers/{{ customer_id }}/send-to-admin">{{ t('send_debt_to_admin') }}</a>
     {% endif %}
   </form>
   {% if rows %}
