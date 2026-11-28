@@ -76,7 +76,7 @@ from app.models import (
     User,
 )
 from app.pdf import DEFAULT_ACCENT, DEFAULT_TEMPLATE, FORMAL_COLORS, normalize_accent, normalize_template, pdf_filename, normalize_transparency
-from app.send import pdf_path, send_invoice, send_text, write_pdf
+from app.send import channel_token, pdf_path, send_invoice, send_text, write_pdf
 
 log = logging.getLogger("invoice")
 logging.basicConfig(level=logging.INFO)
