@@ -76,7 +76,7 @@ from app.models import (
     User,
 )
 from app.pdf import DEFAULT_ACCENT, DEFAULT_TEMPLATE, FORMAL_COLORS, normalize_accent, normalize_template, pdf_filename, normalize_transparency
-from app.send import pdf_path, send_invoice, write_pdf
+from app.send import pdf_path, send_invoice, send_text, write_pdf
 
 log = logging.getLogger("invoice")
 logging.basicConfig(level=logging.INFO)
@@ -1420,54 +1420,54 @@ def summary_csv(request: Request, start: str = "", end: str = ""):
 
 @app.get("/send-debt/{customer_id}")
 def send_debt_to_admin(request: Request, customer_id: int):
+    denied = require_admin(request)
+    if denied:
+        return denied
     locale = request.state.user.locale
     with session() as db:
         customer = db.get(Customer, customer_id)
         if customer is None:
             return html(request, "missing.html", status_code=404)
-        invoices = db.scalars(
-            select(Invoice)
-            .where(
-                Invoice.customer_id == customer_id,
-                Invoice.doc_type == "invoice",
-                Invoice.archived.is_(False),
-            )
-            .options(selectinload(Invoice.lines), selectinload(Invoice.payments))
-        ).unique().all()
-        lines = []
+        drive = load_drive(db)
+        lines = [f"{translate(locale, 'debt_of')} {customer.name}"]
         total = 0
-        for invoice in invoices:
-            outstanding = present(invoice)["outstanding"]
-            if outstanding <= 0:
-                continue
-            lines.append(
-                f"{translate(locale, 'invoice_no')} {invoice.number}: {format_number(outstanding, locale)}"
+        invoices = db.scalars(
+            select(Invoice).where(
+                Invoice.customer_id == customer.id,
+                Invoice.archived.is_(False),
+                Invoice.doc_type == "invoice",
             )
-            total += outstanding
-        contract = db.scalar(select(Contract).where(Contract.customer_id == customer_id))
-        if contract is not None:
-            for term in contract.terms:
-                _total, _paid, remaining = contract_balance(
-                    term.monthly_amount,
-                    term.duration,
-                    [payment.amount for payment in term.payments],
-                )
-                if remaining <= 0:
-                    continue
-                lines.append(
-                    f"{translate(locale, 'contract_word')}: {format_number(remaining, locale)}"
-                )
-                total += remaining
-        if not lines:
-            return html(request, "error.html", message=translate(locale, "debt_none"))
-        message = (
-            f"{translate(locale, 'debt_of')}: {customer.name}\n\n"
-            + "\n".join(lines)
-            + f"\n\n{translate(locale, 'total')}: {format_number(total, locale)}"
-        )
-        # ارسال با شناسه مدیر؛ نه شناسه مشتری
-        ...
-    return redirect(f"/invoices?customer={customer_id}")
+        ).all()
+        for inv in invoices:
+            due = present(inv)["outstanding"]
+            if due <= 0:
+                continue
+            total += due
+            lines.append(f"{translate(locale, 'invoice_no')} {inv.number}: {format_number(due, locale)}")
+        contracts = db.scalars(select(Contract).where(Contract.customer_id == customer.id)).all()
+        for contract in contracts:
+            _gross, _paid, remain = contract_balance(
+                contract.monthly_amount, contract.duration, contract.paid_amounts
+            )
+            if remain <= 0:
+                continue
+            total += remain
+            lines.append(f"{translate(locale, 'contract_word')} {contract.title}: {format_number(remain, locale)}")
+        if total <= 0:
+            return redirect(f"/invoices?customer={customer.id}&m=debt_none")
+        lines.append(f"{translate(locale, 'total')}: {format_number(total, locale)} {translate(locale, 'toman')}")
+        text = "\n".join(lines)
+        sent = False
+        for channel, key in (("bale", "admin_bale_id"), ("telegram", "admin_telegram_id")):
+            chat_id = (drive.get(key) or "").strip()
+            if not chat_id:
+                continue
+            ok, error = send_text(channel, chat_id, text, channel_token(db, channel))
+            if ok:
+                sent = True
+            else:
+                log.info("admin debt send failed on %s: %s", channel, error)
+        return redirect(f"/invoices?customer={customer.id}&m={'send_ok' if sent else 'send_failed'}")
 
 
 def _csv_text(value: str) -> str:

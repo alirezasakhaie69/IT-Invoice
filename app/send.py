@@ -297,3 +297,27 @@ def send_debt_to_admin(text_en: str, text_fa: str, drive) -> tuple[str, str]:
     if any(results):
         return "partial", "debt_partial_fail"
     return "failed", "debt_failed"
+def send_text(channel: str, chat_id: str, text: str, token: str) -> tuple[bool, str]:
+    if channel == "bale":
+        base, proxy = bale_base(), None
+    else:
+        base, proxy = telegram_base(), telegram_proxy() or None
+    if not token or not chat_id.strip():
+        return False, "missing"
+    url = f"{base}/bot{token}/sendMessage"
+    body = json.dumps({"chat_id": chat_id.strip(), "text": text}).encode()
+    try:
+        status, raw = exchange(
+            url, method="POST", data=body,
+            headers={"Content-Type": "application/json"},
+            timeout=30, proxy=proxy,
+        )
+    except ConnectionError as exc:
+        return False, redact(str(exc))
+    try:
+        parsed = json.loads(raw.decode("utf-8", errors="replace"))
+    except json.JSONDecodeError:
+        return False, redact(f"HTTP {status}")
+    if status == 200 and parsed.get("ok") is True:
+        return True, ""
+    return False, redact(str(parsed.get("description") or f"HTTP {status}"))
