@@ -11,7 +11,6 @@
   <div class="field"><label>{{ t('to_date') }}</label>{{ date_field('end', end, 0) }}</div>
   <button class="btn btn-primary" type="submit">{{ t('apply') }}</button>
 </form>
-
 <div class="card">
   <h2>{{ t('currency_group') }}</h2>
   {% if buckets %}
@@ -32,7 +31,6 @@
   <p>{{ t('no_records') }}</p>
   {% endif %}
 </div>
-
 <div class="card table-wrap">
   {% if rows %}
   <table class="data">
@@ -56,18 +54,6 @@
       {% endfor %}
     </tbody>
   </table>
-
-  <!-- دکمه ارسال بدهی به مدیر (فقط برای مشتریانی که بدهی دارند) -->
-  {% for row in rows %}
-    {% if row.outstanding > 0 %}
-    <div style="margin-top: 12px;">
-      <a href="/send-debt/{{ row.customer_id }}" class="btn btn-primary">
-        {{ t('send_debt_admin') }}
-      </a>
-    </div>
-    {% endif %}
-  {% endfor %}
-
   {% else %}
   <p>{{ t('no_records') }}</p>
   {% endif %}

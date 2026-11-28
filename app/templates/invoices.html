@@ -69,6 +69,9 @@
     {% else %}
     <a class="btn btn-secondary btn-small" href="/invoices">{{ t('clear_filters') }}</a>
     {% endif %}
+    {% if customer_id %}
+    <a class="btn btn-secondary" href="/customers/{{ customer_id }}/send-to-admin">{{ t('send_debt_to_admin') }}</a>
+    {% endif %}
   </form>
   {% if rows %}
   <table class="data">

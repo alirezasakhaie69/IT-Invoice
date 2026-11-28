@@ -1418,43 +1418,56 @@ def summary_csv(request: Request, start: str = "", end: str = ""):
     return Response(payload, media_type="text/csv; charset=utf-8", headers={"Content-Disposition": "attachment; filename=summary.csv"})
 
 
-# اضافه شده توسط شما
 @app.get("/send-debt/{customer_id}")
 def send_debt_to_admin(request: Request, customer_id: int):
     locale = request.state.user.locale
     with session() as db:
         customer = db.get(Customer, customer_id)
-        if not customer:
-            return html(request, "error.html", message="مشتری یافت نشد")
-        # جمع‌آوری بدهی (outstanding) از فاکتورهای مشتری
-        rows = db.query(Invoice).filter(Invoice.customer_id == customer_id).all()
-        # ساخت پیام (دقیقاً همان فرمت مثال)
-        message = f"{translate(locale, 'debt_of')}: {customer.name}\n\n"
+        if customer is None:
+            return html(request, "missing.html", status_code=404)
+        invoices = db.scalars(
+            select(Invoice)
+            .where(
+                Invoice.customer_id == customer_id,
+                Invoice.doc_type == "invoice",
+                Invoice.archived.is_(False),
+            )
+            .options(selectinload(Invoice.lines), selectinload(Invoice.payments))
+        ).unique().all()
+        lines = []
         total = 0
-        for inv in rows:
-            if inv.outstanding > 0:
-                message += f"{translate(locale, 'invoice_no')} {inv.number}: {format_number(inv.outstanding, locale)}\n"
-                total += inv.outstanding
-        message += f"\n{translate(locale, 'total')}: {format_number(total, locale)}"
-        # ارسال (هر دو کانال)
-        sent = 0
-        failed = 0
-        if customer.admin_bale_id:
-            ok, _ = send_message_to_bale(customer.admin_bale_id, message)
-            if ok:
-                sent += 1
-            else:
-                failed += 1
-        if customer.admin_telegram_id:
-            ok, _ = send_message_to_telegram(customer.admin_telegram_id, message)
-            if ok:
-                sent += 1
-            else:
-                failed += 1
-        if sent > 0:
-            return html(request, "success.html", message=translate(locale, 'debt_sent'))
-        else:
-            return html(request, "error.html", message=translate(locale, 'debt_failed'))
+        for invoice in invoices:
+            outstanding = present(invoice)["outstanding"]
+            if outstanding <= 0:
+                continue
+            lines.append(
+                f"{translate(locale, 'invoice_no')} {invoice.number}: {format_number(outstanding, locale)}"
+            )
+            total += outstanding
+        contract = db.scalar(select(Contract).where(Contract.customer_id == customer_id))
+        if contract is not None:
+            for term in contract.terms:
+                _total, _paid, remaining = contract_balance(
+                    term.monthly_amount,
+                    term.duration,
+                    [payment.amount for payment in term.payments],
+                )
+                if remaining <= 0:
+                    continue
+                lines.append(
+                    f"{translate(locale, 'contract_word')}: {format_number(remaining, locale)}"
+                )
+                total += remaining
+        if not lines:
+            return html(request, "error.html", message=translate(locale, "debt_none"))
+        message = (
+            f"{translate(locale, 'debt_of')}: {customer.name}\n\n"
+            + "\n".join(lines)
+            + f"\n\n{translate(locale, 'total')}: {format_number(total, locale)}"
+        )
+        # ارسال با شناسه مدیر؛ نه شناسه مشتری
+        ...
+    return redirect(f"/invoices?customer={customer_id}")
 
 
 def _csv_text(value: str) -> str:
